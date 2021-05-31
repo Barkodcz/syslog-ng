@@ -27,52 +27,108 @@
 
 #include <stdio.h>
 
-static int
-_mqtt_send(MQTTDestinationWorker *self, char *msg)
+static void
+_mqtt_send(MQTTDestinationWorker *self, char *msg, gint *publish_result, gint *loop_result)
 {
-  int publish_result;
-  int loop_result;
-  publish_result = mosquitto_publish(self->mosq, NULL, self->topic->str, strlen(msg), msg, 1, 0);
-  loop_result = mosquitto_loop(self->mosq, 1000, 1);
-  msg_error("send", evt_tag_int("loop_result", loop_result));
-  
-  return publish_result;
+
+  *publish_result = mosquitto_publish(self->mosq, NULL, self->topic->str, strlen(msg), msg, 1, 0);
+  *loop_result = mosquitto_loop(self->mosq, 1000, 1);
+  msg_error("send", evt_tag_int("loop_result", (*loop_result)), evt_tag_int("publish_result", (*publish_result)));
 }
+
+
+static LogThreadedResult
+_publish_result_evalution(gint result)
+{
+  switch(result)
+    {
+      case MOSQ_ERR_NO_CONN:
+      {
+        return LTR_NOT_CONNECTED;
+      }
+      case MOSQ_ERR_INVAL:
+      case MOSQ_ERR_NOMEM:
+      case MOSQ_ERR_PROTOCOL:
+      case MOSQ_ERR_PAYLOAD_SIZE:
+      case MOSQ_ERR_MALFORMED_UTF8:
+      case MOSQ_ERR_QOS_NOT_SUPPORTED:
+      case MOSQ_ERR_OVERSIZE_PACKET:
+        {
+          msg_error("Error while sending message");
+          return LTR_ERROR;
+        }
+      case MOSQ_ERR_SUCCESS:
+      default:
+        {
+          return LTR_SUCCESS;
+        }
+    }
+}
+
+static LogThreadedResult
+_loop_result_evalution(gint result)
+{
+  switch(result)
+    {
+      case MOSQ_ERR_NO_CONN:
+      case MOSQ_ERR_CONN_LOST:
+        {
+          return LTR_NOT_CONNECTED;
+          break;
+        }
+      case MOSQ_ERR_ERRNO:
+      case MOSQ_ERR_INVAL:
+      case MOSQ_ERR_NOMEM:
+      case MOSQ_ERR_PROTOCOL:
+        {
+          msg_error("Error while sending message");
+          return LTR_ERROR;
+          break;
+        }
+      case MOSQ_ERR_SUCCESS:
+      default:
+        {
+          return LTR_SUCCESS;
+          break;
+        }
+    }
+}
+
 
 static LogThreadedResult
 _dw_insert(LogThreadedDestWorker *s, LogMessage *msg)
 {
+  msg_error("insert begin");
   MQTTDestinationWorker *self = (MQTTDestinationWorker *)s;
+  LogThreadedResult result = LTR_SUCCESS;
 
   GString *string_to_write = g_string_new("");
   g_string_printf(string_to_write, "thread_id=%lu message=%s\n",
                   self->thread_id, log_msg_get_value(msg, LM_V_MESSAGE, NULL));
 
-  int retval = _mqtt_send(self, string_to_write->str);
-  msg_error("insert", evt_tag_int("retval", retval));
-  if (retval != MOSQ_ERR_SUCCESS)
-    {
-      switch(retval)
-        {
-          case MOSQ_ERR_INVAL:
-          case MOSQ_ERR_NOMEM:
-          case MOSQ_ERR_NO_CONN:
-          case MOSQ_ERR_PROTOCOL:
-          case MOSQ_ERR_PAYLOAD_SIZE:
-          case MOSQ_ERR_MALFORMED_UTF8:
-          case MOSQ_ERR_QOS_NOT_SUPPORTED:
-          case MOSQ_ERR_OVERSIZE_PACKET:
-            {
-              msg_error("Error while sending message");
-              return LTR_ERROR;
-              break;
-            }
-          
-        }
-    }
+  gint publish_result;
+  gint loop_result;
+  _mqtt_send(self, string_to_write->str, &publish_result, &loop_result);
 
   g_string_free(string_to_write, TRUE);
 
+  if(mosquitto_want_write(self->mosq))
+    msg_error("YES - want write");
+  else
+    msg_error("No - want write");
+
+
+  result = _publish_result_evalution(loop_result);
+
+  if (result != LTR_SUCCESS)
+      return result;
+
+  result = _loop_result_evalution(loop_result);
+
+  if (result != LTR_SUCCESS)
+      return result;
+
+  msg_error("insert success");
   return LTR_SUCCESS;
   /*
    * LTR_DROP,
@@ -112,6 +168,7 @@ _connect(LogThreadedDestWorker *s)
       msg_error("Could not connect mosquitto", evt_tag_error("error"));
       return FALSE;
     }
+  mosquitto_loop(self->mosq, 1000, 1);
 
   // loop = mosquitto_loop_start(self->mosq);
   // if (loop != MOSQ_ERR_SUCCESS)
@@ -128,6 +185,7 @@ _disconnect(LogThreadedDestWorker *s)
 {
   MQTTDestinationWorker *self = (MQTTDestinationWorker *)s;
   mosquitto_disconnect(self->mosq);
+  mosquitto_loop(self->mosq, 1000, 1);
   msg_error("disconnect");
 }
 
@@ -158,7 +216,7 @@ _thread_init(LogThreadedDestWorker *s)
   _set_mosquitto_callback(self->mosq);
 
   mosquitto_threaded_set(self->mosq, true); // ezt megnézzni
-
+  mosquitto_reconnect_delay_set(self->mosq, 1, 60, TRUE);
 
   return log_threaded_dest_worker_init_method(s);
 }
