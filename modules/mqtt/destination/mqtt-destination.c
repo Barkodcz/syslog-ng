@@ -93,9 +93,16 @@ _format_stats_instance(LogThreadedDestDriver *d)
 {
   MQTTDestinationDriver *self = (MQTTDestinationDriver *)d;
   static gchar persist_name[1024];
+  if (((LogPipe *)d)->persist_name)
+    {
+      g_snprintf(persist_name, sizeof(persist_name), "%s", ((LogPipe *)d)->persist_name);
+    }
+  else
+    g_snprintf(persist_name, sizeof(persist_name),
+              "mqtt-destination,%s,%d,%s", self->host->str, self->port, self->topic->str);
 
-  g_snprintf(persist_name, sizeof(persist_name),
-             "mqtt-destination,%s.%d.%s", self->host->str, self->port, self->topic->str);
+  msg_error("mqtt_stats_instance", evt_tag_printf("instance", "%s", persist_name));
+
   return persist_name;
 }
 
@@ -108,7 +115,7 @@ _format_persist_name(const LogPipe *d)
   if (d->persist_name)
     g_snprintf(persist_name, sizeof(persist_name), "mqtt-destination.%s", d->persist_name);
   else
-    g_snprintf(persist_name, sizeof(persist_name), "mqtt-destination.%s.%d.%s", self->host->str, self->port, self->topic->str);
+    g_snprintf(persist_name, sizeof(persist_name), "mqtt-destination.(%s,%d,%s)", self->host->str, self->port, self->topic->str);
 
   return persist_name;
 }
@@ -133,6 +140,8 @@ static gboolean
 _dd_init(LogPipe *d)
 {
   MQTTDestinationDriver *self = (MQTTDestinationDriver *)d;
+  
+  _set_default_value(self);
 
   if (!log_threaded_dest_driver_init_method(d))
     return FALSE;
@@ -140,7 +149,6 @@ _dd_init(LogPipe *d)
   if (self->topic->len == 0)
     return FALSE;
 
-  _set_default_value(self);
 
   return TRUE;
 }
