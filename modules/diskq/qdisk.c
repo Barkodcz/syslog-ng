@@ -73,7 +73,8 @@ struct _QDisk
 {
   gchar *filename;
   const gchar *file_id;
-  gint fd;
+  gint fd_write;
+  gint fd_read;
   gint64 file_size;
   QDiskFileHeader *hdr;
   DiskQueueOptions *options;
@@ -82,7 +83,7 @@ struct _QDisk
 static gboolean
 pwrite_strict(QDisk *self, const void *buf, size_t count, off_t offset)
 {
-  ssize_t written = pwrite(self->fd, buf, count, offset);
+  ssize_t written = pwrite(self->fd_write, buf, count, offset);
   gboolean result = TRUE;
   if (written != count)
     {
@@ -148,7 +149,7 @@ _next_filename(QDisk *self)
 gboolean
 qdisk_started(QDisk *self)
 {
-  return self->fd >= 0;
+  return self->fd_write >= 0 && self->fd_read;
 }
 
 static inline gboolean
@@ -224,14 +225,14 @@ _truncate_file(QDisk *self, gint64 expected_size)
       return;
     }
 
-  if (ftruncate(self->fd, (off_t) expected_size) == 0)
+  if (ftruncate(self->fd_write, (off_t) expected_size) == 0)
     {
       self->file_size = expected_size;
       return;
     }
 
   struct stat st;
-  if (fstat(self->fd, &st) < 0)
+  if (fstat(self->fd_write, &st) < 0)
     {
       msg_error("truncate file: cannot stat", evt_tag_error("error"));
     }
@@ -245,7 +246,7 @@ _truncate_file(QDisk *self, gint64 expected_size)
             evt_tag_str("filename", self->filename),
             evt_tag_long("expected-size", expected_size),
             evt_tag_long("file-size", self->file_size),
-            evt_tag_int("fd", self->fd));
+            evt_tag_int("fd_write", self->fd_write));
 }
 
 static gint64
@@ -394,13 +395,13 @@ qdisk_pop_head(QDisk *self, GString *record)
     {
       guint32 record_length;
       gssize res;
-      res = pread(self->fd, (gchar *) &record_length, sizeof(record_length), self->hdr->read_head);
+      res = pread(self->fd_read, (gchar *) &record_length, sizeof(record_length), self->hdr->read_head);
 
       if (res == 0)
         {
           /* hmm, we are either at EOF or at hdr->qout_ofs, we need to wrap */
           self->hdr->read_head = QDISK_RESERVED_SPACE;
-          res = pread(self->fd, (gchar *) &record_length, sizeof(record_length), self->hdr->read_head);
+          res = pread(self->fd_read, (gchar *) &record_length, sizeof(record_length), self->hdr->read_head);
         }
       if (res != sizeof(record_length))
         {
@@ -430,7 +431,7 @@ qdisk_pop_head(QDisk *self, GString *record)
         }
 
       g_string_set_size(record, record_length);
-      res = pread(self->fd, record->str, record_length, self->hdr->read_head + sizeof(record_length));
+      res = pread(self->fd_read, record->str, record_length, self->hdr->read_head + sizeof(record_length));
       if (res != record_length)
         {
           msg_error("Error reading disk-queue file",
@@ -468,7 +469,7 @@ qdisk_pop_head(QDisk *self, GString *record)
 static FILE *
 _create_stream(QDisk *self, gint64 offset)
 {
-  int fd_copy = dup(self->fd);
+  int fd_copy = dup(self->fd_read);
   FILE *f = fdopen(fd_copy, "r");
   if (!f)
     {
@@ -659,7 +660,7 @@ _load_state(QDisk *self, GQueue *qout, GQueue *qbacklog, GQueue *qoverflow)
   else
     {
       struct stat st;
-      fstat(self->fd, &st);
+      fstat(self->fd_write, &st);
       self->file_size = st.st_size;
       msg_info("Reliable disk-buffer state loaded",
                evt_tag_str("filename", self->filename),
@@ -687,7 +688,7 @@ string_reached_memory_limit(GString *string)
 static gboolean
 qdisk_write_serialized_string_to_file(QDisk *self, GString const *serialized, gint64 *offset)
 {
-  *offset = lseek(self->fd, 0, SEEK_END);
+  *offset = lseek(self->fd_write, 0, SEEK_END);
   if (!pwrite_strict(self, serialized->str, serialized->len, *offset))
     {
       msg_error("Error writing in-memory buffer of disk-queue to disk",
@@ -862,8 +863,8 @@ qdisk_start(QDisk *self, const gchar *filename, GQueue *qout, GQueue *qbacklog, 
   /* assumes self is zero initialized */
   openflags = self->options->read_only ? (O_RDONLY | O_LARGEFILE) : (O_RDWR | O_LARGEFILE | (new_file ? O_CREAT : 0));
 
-  self->fd = open(filename, openflags, 0600);
-  if (self->fd < 0)
+  self->fd_read = open(filename, openflags, 0600);
+  if (self->fd_read < 0)
     {
       msg_error("Error opening disk-queue file",
                 evt_tag_str("filename", self->filename),
@@ -872,7 +873,31 @@ qdisk_start(QDisk *self, const gchar *filename, GQueue *qout, GQueue *qbacklog, 
     }
 
   p = mmap(0, sizeof(QDiskFileHeader),  self->options->read_only ? (PROT_READ) : (PROT_READ | PROT_WRITE), MAP_SHARED,
-           self->fd, 0);
+           self->fd_read, 0);
+
+  if (p == MAP_FAILED)
+    {
+      msg_error("Error returned by mmap",
+                evt_tag_error("errno"),
+                evt_tag_str("filename", self->filename));
+      return FALSE;
+    }
+  else
+    {
+      madvise(p, sizeof(QDiskFileHeader), MADV_RANDOM);
+    }
+
+  self->fd_write = open(filename, openflags, 0600);
+  if (self->fd_write < 0)
+    {
+      msg_error("Error opening disk-queue file",
+                evt_tag_str("filename", self->filename),
+                evt_tag_error("error"));
+      return FALSE;
+    }
+
+  p = mmap(0, sizeof(QDiskFileHeader),  self->options->read_only ? (PROT_READ) : (PROT_READ | PROT_WRITE), MAP_SHARED,
+           self->fd_write, 0);
 
   if (p == MAP_FAILED)
     {
@@ -910,8 +935,10 @@ qdisk_start(QDisk *self, const gchar *filename, GQueue *qout, GQueue *qbacklog, 
                     evt_tag_error("error"));
           munmap((void *)self->hdr, sizeof(QDiskFileHeader));
           self->hdr = NULL;
-          close(self->fd);
-          self->fd = -1;
+          close(self->fd_write);
+          self->fd_write = -1;
+          close(self->fd_read);
+          self->fd_read = -1;
           return FALSE;
         }
       self->hdr->version = 1;
@@ -927,8 +954,10 @@ qdisk_start(QDisk *self, const gchar *filename, GQueue *qout, GQueue *qbacklog, 
         {
           munmap((void *)self->hdr, sizeof(QDiskFileHeader));
           self->hdr = NULL;
-          close(self->fd);
-          self->fd = -1;
+          close(self->fd_write);
+          self->fd_write = -1;
+          close(self->fd_read);
+          self->fd_read = -1;
           return FALSE;
         }
     }
@@ -936,7 +965,7 @@ qdisk_start(QDisk *self, const gchar *filename, GQueue *qout, GQueue *qbacklog, 
     {
       struct stat st;
 
-      if (fstat(self->fd, &st) != 0 || st.st_size == 0)
+      if (fstat(self->fd_read, &st) != 0 || st.st_size == 0)
         {
           msg_error("Error loading disk-queue file",
                     evt_tag_str("filename", self->filename),
@@ -944,8 +973,21 @@ qdisk_start(QDisk *self, const gchar *filename, GQueue *qout, GQueue *qbacklog, 
                     evt_tag_int("size", st.st_size));
           munmap((void *)self->hdr, sizeof(QDiskFileHeader));
           self->hdr = NULL;
-          close(self->fd);
-          self->fd = -1;
+          close(self->fd_read);
+          self->fd_read = -1;
+          return FALSE;
+        }
+
+      if (fstat(self->fd_write, &st) != 0 || st.st_size == 0)
+        {
+          msg_error("Error loading disk-queue file",
+                    evt_tag_str("filename", self->filename),
+                    evt_tag_error("fstat error"),
+                    evt_tag_int("size", st.st_size));
+          munmap((void *)self->hdr, sizeof(QDiskFileHeader));
+          self->hdr = NULL;
+          close(self->fd_write);
+          self->fd_write = -1;
           return FALSE;
         }
       if (self->hdr->version == 0)
@@ -974,8 +1016,10 @@ qdisk_start(QDisk *self, const gchar *filename, GQueue *qout, GQueue *qbacklog, 
         {
           munmap((void *)self->hdr, sizeof(QDiskFileHeader));
           self->hdr = NULL;
-          close(self->fd);
-          self->fd = -1;
+          close(self->fd_write);
+          self->fd_write = -1;
+          close(self->fd_read);
+          self->fd_read = -1;
           return FALSE;
         }
 
@@ -986,7 +1030,8 @@ qdisk_start(QDisk *self, const gchar *filename, GQueue *qout, GQueue *qbacklog, 
 void
 qdisk_init_instance(QDisk *self, DiskQueueOptions *options, const gchar *file_id)
 {
-  self->fd = -1;
+  self->fd_write = -1;
+  self->fd_read = -1;
   self->file_size = 0;
   self->options = options;
 
@@ -1011,12 +1056,17 @@ qdisk_stop(QDisk *self)
       self->hdr = NULL;
     }
 
-  if (self->fd != -1)
+  if (self->fd_write != -1)
     {
-      close(self->fd);
-      self->fd = -1;
+      close(self->fd_write);
+      self->fd_write = -1;
     }
 
+  if (self->fd_read != -1)
+    {
+      close(self->fd_read);
+      self->fd_read = -1;
+    }
   self->options = NULL;
 }
 
@@ -1024,7 +1074,7 @@ gssize
 qdisk_read(QDisk *self, gpointer buffer, gsize bytes_to_read, gint64 position)
 {
   gssize res;
-  res = pread(self->fd, buffer, bytes_to_read, position);
+  res = pread(self->fd_read, buffer, bytes_to_read, position);
   if (res <= 0)
     {
       msg_error("Error reading disk-queue file",
