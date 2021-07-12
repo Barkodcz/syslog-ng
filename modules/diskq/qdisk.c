@@ -80,9 +80,9 @@ struct _QDisk
 };
 
 static gboolean
-pwrite_strict(gint fd, const void *buf, size_t count, off_t offset)
+pwrite_strict(QDisk *self, const void *buf, size_t count, off_t offset)
 {
-  ssize_t written = pwrite(fd, buf, count, offset);
+  ssize_t written = pwrite(self->fd, buf, count, offset);
   gboolean result = TRUE;
   if (written != count)
     {
@@ -319,8 +319,8 @@ qdisk_push_tail(QDisk *self, GString *record)
       return FALSE;
     }
 
-  if (!pwrite_strict(self->fd, (gchar *) &record_length, sizeof(record_length), self->hdr->write_head) ||
-      !pwrite_strict(self->fd, record->str, record->len, self->hdr->write_head + sizeof(record_length)))
+  if (!pwrite_strict(self, (gchar *) &record_length, sizeof(record_length), self->hdr->write_head) ||
+      !pwrite_strict(self, record->str, record->len, self->hdr->write_head + sizeof(record_length)))
     {
       msg_error("Error writing disk-queue file",
                 evt_tag_error("error"));
@@ -688,7 +688,7 @@ static gboolean
 qdisk_write_serialized_string_to_file(QDisk *self, GString const *serialized, gint64 *offset)
 {
   *offset = lseek(self->fd, 0, SEEK_END);
-  if (!pwrite_strict(self->fd, serialized->str, serialized->len, *offset))
+  if (!pwrite_strict(self, serialized->str, serialized->len, *offset))
     {
       msg_error("Error writing in-memory buffer of disk-queue to disk",
                 evt_tag_str("filename", self->filename),
@@ -903,7 +903,7 @@ qdisk_start(QDisk *self, const gchar *filename, GQueue *qout, GQueue *qbacklog, 
     {
       QDiskFileHeader tmp;
       memset(&tmp, 0, sizeof(tmp));
-      if (!pwrite_strict(self->fd, &tmp, sizeof(tmp), 0))
+      if (!pwrite_strict(self, &tmp, sizeof(tmp), 0))
         {
           msg_error("Error occurred while initializing the new queue file",
                     evt_tag_str("filename", self->filename),
