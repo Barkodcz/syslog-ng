@@ -300,6 +300,10 @@ _write_message(LogQueueDisk *self, LogMessage *msg)
   gboolean consumed = FALSE;
   if (qdisk_started(self->qdisk) && qdisk_is_space_avail(self->qdisk, 64))
     {
+
+      // I'm not sure it is necessary to erase serialized string, but
+      // if some msg serialized format shorter then others, then it is possible to have a problem
+      // can be use g_string_truncate to "erase" everything? Otherwise, it is important to be 64 long
       g_string_erase(self->write_serialized, 0, -1);
       sa = serialize_string_archive_new(self->write_serialized);
       log_msg_serialize(msg, sa, options->compaction ? LMSF_COMPACTION : 0);
