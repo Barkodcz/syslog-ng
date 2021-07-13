@@ -35,6 +35,7 @@ struct _LogQueueDisk
 {
   LogQueue super;
   QDisk *qdisk;         /* disk based queue */
+  GString *write_serialized;
   gint64 (*get_length)(LogQueueDisk *s);
   gboolean (*push_tail)(LogQueueDisk *s, LogMessage *msg, LogPathOptions *local_options,
                         const LogPathOptions *path_options);
