@@ -320,8 +320,10 @@ qdisk_push_tail(QDisk *self, GString *record)
       return FALSE;
     }
 
-  if (!pwrite_strict(self->fd, (gchar *) &record_length, sizeof(record_length), self->hdr->write_head) ||
-      !pwrite_strict(self->fd, record->str, record->len, self->hdr->write_head + sizeof(record_length)))
+  g_string_truncate(self->temp, 0);
+  g_string_append_len(self->temp, ((gchar *) &record_length), sizeof(record_length));
+  g_string_append_len(self->temp, (record->str), record->len);
+  if (!pwrite_strict(self->fd, self->temp->str, self->temp->len, self->hdr->write_head))
     {
       msg_error("Error writing disk-queue file",
                 evt_tag_error("error"));
