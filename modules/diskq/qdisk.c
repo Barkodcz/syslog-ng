@@ -77,6 +77,7 @@ struct _QDisk
   gint64 file_size;
   QDiskFileHeader *hdr;
   DiskQueueOptions *options;
+  GString *temp;
 };
 
 static gboolean
@@ -980,6 +981,7 @@ qdisk_start(QDisk *self, const gchar *filename, GQueue *qout, GQueue *qbacklog, 
         }
 
     }
+  self->temp = g_string_new("");
   return TRUE;
 }
 
@@ -1018,6 +1020,12 @@ qdisk_stop(QDisk *self)
     }
 
   self->options = NULL;
+
+  if (self->temp)
+    {
+      g_string_free(self->temp, TRUE);
+      self->temp = NULL;
+    }
 }
 
 gssize
