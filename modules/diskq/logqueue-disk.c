@@ -219,6 +219,12 @@ _free(LogQueue *s)
       self->write_serialized = NULL;
     }
 
+  if (self->read_serialized)
+    {
+      g_string_free(self->read_serialized, TRUE);
+      self->read_serialized = NULL;
+    }
+
   qdisk_stop(self->qdisk);
   qdisk_free(self->qdisk);
 
@@ -228,7 +234,6 @@ _free(LogQueue *s)
 static gboolean
 _pop_disk(LogQueueDisk *self, LogMessage **msg)
 {
-  GString *serialized;
   SerializeArchive *sa;
 
   *msg = NULL;
@@ -236,19 +241,18 @@ _pop_disk(LogQueueDisk *self, LogMessage **msg)
   if (!qdisk_started(self->qdisk))
     return FALSE;
 
-  serialized = g_string_sized_new(64);
-  if (!qdisk_pop_head(self->qdisk, serialized))
+  g_string_erase(self->read_serialized, 0, -1);
+
+  if (!qdisk_pop_head(self->qdisk, self->read_serialized))
     {
-      g_string_free(serialized, TRUE);
       return FALSE;
     }
 
-  sa = serialize_string_archive_new(serialized);
+  sa = serialize_string_archive_new(self->read_serialized);
   *msg = log_msg_new_empty();
 
   if (!log_msg_deserialize(*msg, sa))
     {
-      g_string_free(serialized, TRUE);
       serialize_archive_free(sa);
       log_msg_unref(*msg);
       *msg = NULL;
@@ -260,7 +264,6 @@ _pop_disk(LogQueueDisk *self, LogMessage **msg)
 
   serialize_archive_free(sa);
 
-  g_string_free(serialized, TRUE);
   return TRUE;
 }
 
@@ -346,6 +349,7 @@ log_queue_disk_init_instance(LogQueueDisk *self, const gchar *persist_name)
   log_queue_init_instance(&self->super, persist_name);
   self->qdisk = qdisk_new();
   self->write_serialized = g_string_sized_new(64);
+  self->read_serialized = g_string_sized_new(64);
 
   self->super.type = log_queue_disk_type;
   self->super.get_length = _get_length;
