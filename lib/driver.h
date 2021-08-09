@@ -142,6 +142,9 @@ struct _LogSrcDriver
   LogDriver super;
   gint group_len;
   StatsCounterItem *received_global_messages;
+  guint64 count_messages;
+  gssize sum_message_sizes;
+  StatsCounterItem *avg_message_size;
 };
 
 gboolean log_src_driver_init_method(LogPipe *s);
@@ -168,6 +171,9 @@ struct _LogDestDriver
   gint log_fifo_size;
   gint throttle;
   StatsCounterItem *queued_global_messages;
+  guint64 count_messages;
+  gssize sum_message_sizes;
+  StatsCounterItem *avg_message_size;
 };
 
 /* returns a reference */

@@ -181,6 +181,7 @@ log_src_driver_init_method(LogPipe *s)
                          &self->super.processed_group_messages);
   stats_cluster_logpipe_key_set(&sc_key,  SCS_CENTER, NULL, "received" );
   stats_register_counter(0, &sc_key, SC_TYPE_PROCESSED, &self->received_global_messages);
+  stats_register_counter(0, &sc_key, SC_TYPE_AVG_MESSAGE_SIZE, &self->avg_message_size);
   stats_unlock();
 
   return TRUE;
@@ -197,12 +198,19 @@ log_src_driver_deinit_method(LogPipe *s)
   stats_lock();
   StatsClusterKey sc_key;
   stats_cluster_logpipe_key_set(&sc_key, SCS_SOURCE | SCS_GROUP, self->super.group, NULL );
+  stats_unregister_counter(&sc_key, SC_TYPE_AVG_MESSAGE_SIZE, &self->avg_message_size);
   stats_unregister_counter(&sc_key, SC_TYPE_PROCESSED,
                            &self->super.processed_group_messages);
   stats_cluster_logpipe_key_set(&sc_key, SCS_CENTER, NULL, "received" );
   stats_unregister_counter(&sc_key, SC_TYPE_PROCESSED, &self->received_global_messages);
   stats_unlock();
   return TRUE;
+}
+
+static gssize
+_get_message_length(LogMessage *msg)
+{
+  return log_msg_Get_size(msg);
 }
 
 void
@@ -219,6 +227,9 @@ log_src_driver_queue_method(LogPipe *s, LogMessage *msg, const LogPathOptions *p
   log_msg_set_value(msg, LM_V_SOURCE, self->super.group, self->group_len);
   stats_counter_inc(self->super.processed_group_messages);
   stats_counter_inc(self->received_global_messages);
+  ++self->count_messages;
+  self->sum_message_sizes += _get_message_length(msg);
+  stats_counter_set(self->avg_message_size, (self->sum_message_sizes / self->count_messages));
   log_pipe_forward_msg(s, msg, path_options);
 }
 
@@ -310,6 +321,9 @@ log_dest_driver_queue_method(LogPipe *s, LogMessage *msg, const LogPathOptions *
 
   stats_counter_inc(self->super.processed_group_messages);
   stats_counter_inc(self->queued_global_messages);
+  ++self->count_messages;
+  self->sum_message_sizes += _get_message_length(msg);
+  stats_counter_set(self->avg_message_size, (self->sum_message_sizes / self->count_messages));
   log_pipe_forward_msg(s, msg, path_options);
 }
 
@@ -338,6 +352,7 @@ log_dest_driver_init_method(LogPipe *s)
   stats_lock();
   StatsClusterKey sc_key;
   stats_cluster_logpipe_key_set(&sc_key, SCS_DESTINATION | SCS_GROUP, self->super.group, NULL );
+  stats_register_counter(0, &sc_key, SC_TYPE_AVG_MESSAGE_SIZE, &self->avg_message_size);
   stats_register_counter(0, &sc_key, SC_TYPE_PROCESSED,
                          &self->super.processed_group_messages);
   stats_cluster_logpipe_key_set(&sc_key, SCS_CENTER, NULL, "queued" );
@@ -373,6 +388,7 @@ log_dest_driver_deinit_method(LogPipe *s)
                            &self->super.processed_group_messages);
   stats_cluster_logpipe_key_set(&sc_key, SCS_CENTER, NULL, "queued" );
   stats_unregister_counter(&sc_key, SC_TYPE_PROCESSED, &self->queued_global_messages);
+  stats_unregister_counter(&sc_key, SC_TYPE_AVG_MESSAGE_SIZE, &self->avg_message_size);
   stats_unlock();
 
   if (!log_driver_deinit_method(s))
