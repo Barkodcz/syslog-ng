@@ -37,6 +37,9 @@ static const gchar *tag_names[SC_TYPE_MAX] =
   /* [SC_TYPE_MATCHED] = */ "matched",
   /* [SC_TYPE_NOT_MATCHED] = */ "not_matched",
   /* [SC_TYPE_WRITTEN] = */ "written",
+  /* [SC_TYPE_EPS_HOUR] = */ "EPS_last_hour",
+  /* [SC_TYPE_EPS_DAY] = */ "EPS_last_day",
+  /* [SC_TYPE_EPS_START] = */ "EPS_since_start",
 };
 
 static void

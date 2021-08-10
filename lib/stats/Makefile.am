@@ -8,6 +8,7 @@ statsinclude_HEADERS = \
 	lib/stats/stats-counter.h		\
 	lib/stats/stats-cluster.h		\
 	lib/stats/stats-csv.h			\
+	lib/stats/stats-eps.h			\
 	lib/stats/stats-log.h			\
 	lib/stats/stats-registry.h		\
 	lib/stats/stats-query.h			\
@@ -20,6 +21,7 @@ stats_sources = \
 	lib/stats/stats-control.c		\
 	lib/stats/stats-cluster.c		\
 	lib/stats/stats-csv.c			\
+	lib/stats/stats-eps.c			\
 	lib/stats/stats-log.c			\
 	lib/stats/stats-registry.c		\
 	lib/stats/stats-query.c			\
