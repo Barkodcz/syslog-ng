@@ -39,6 +39,8 @@ typedef enum
   SC_TYPE_MATCHED, /* discarded messages of filter */
   SC_TYPE_NOT_MATCHED, /* discarded messages of filter */
   SC_TYPE_WRITTEN, /* number of sent messages */
+  SC_TYPE_LARGEST, /* largest size of sent message */
+  SC_TYPE_AVG, /* averge size of sent message */
   SC_TYPE_MAX
 } StatsCounterGroupLogPipe;
 
