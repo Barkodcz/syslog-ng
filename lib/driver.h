@@ -29,6 +29,7 @@
 #include "logpipe.h"
 #include "logqueue.h"
 #include "cfg.h"
+#include "stats/stats-eps.h"
 
 /*
  * Drivers overview
@@ -142,6 +143,7 @@ struct _LogSrcDriver
   LogDriver super;
   gint group_len;
   StatsCounterItem *received_global_messages;
+  StatsEPSItem eps_item;
 };
 
 gboolean log_src_driver_init_method(LogPipe *s);

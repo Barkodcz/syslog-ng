@@ -149,6 +149,7 @@ struct _LogThreadedDestDriver
 
   WorkerOptions worker_options;
   const gchar *(*format_stats_instance)(LogThreadedDestDriver *s);
+  StatsEPSItem eps_item;
 };
 
 static inline gboolean

@@ -176,13 +176,14 @@ log_src_driver_init_method(LogPipe *s)
 
   stats_lock();
   StatsClusterKey sc_key;
+  stats_cluster_logpipe_key_set(&sc_key,  SCS_CENTER, NULL, "received" );
+  stats_register_counter(0, &sc_key, SC_TYPE_PROCESSED, &self->received_global_messages);
   stats_cluster_logpipe_key_set(&sc_key, SCS_SOURCE | SCS_GROUP, self->super.group, NULL );
   stats_register_counter(0, &sc_key, SC_TYPE_PROCESSED,
                          &self->super.processed_group_messages);
-  stats_cluster_logpipe_key_set(&sc_key,  SCS_CENTER, NULL, "received" );
-  stats_register_counter(0, &sc_key, SC_TYPE_PROCESSED, &self->received_global_messages);
   stats_unlock();
 
+  init_stats_eps_item(&self->eps_item, &sc_key, self->super.processed_group_messages);
   return TRUE;
 }
 
@@ -196,12 +197,13 @@ log_src_driver_deinit_method(LogPipe *s)
 
   stats_lock();
   StatsClusterKey sc_key;
+  stats_cluster_logpipe_key_set(&sc_key, SCS_CENTER, NULL, "received" );
+  stats_unregister_counter(&sc_key, SC_TYPE_PROCESSED, &self->received_global_messages);
   stats_cluster_logpipe_key_set(&sc_key, SCS_SOURCE | SCS_GROUP, self->super.group, NULL );
   stats_unregister_counter(&sc_key, SC_TYPE_PROCESSED,
                            &self->super.processed_group_messages);
-  stats_cluster_logpipe_key_set(&sc_key, SCS_CENTER, NULL, "received" );
-  stats_unregister_counter(&sc_key, SC_TYPE_PROCESSED, &self->received_global_messages);
   stats_unlock();
+  deinit_stats_eps_item(&self->eps_item, &sc_key);
   return TRUE;
 }
 
