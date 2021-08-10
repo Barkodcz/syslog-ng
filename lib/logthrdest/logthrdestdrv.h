@@ -108,6 +108,7 @@ struct _LogThreadedDestDriver
   StatsCounterItem *dropped_messages;
   StatsCounterItem *processed_messages;
   StatsCounterItem *written_messages;
+  StatsCounterItem *largest_message;
 
   gint batch_lines;
   gint batch_timeout;
@@ -225,6 +226,8 @@ void log_threaded_dest_worker_init_instance(LogThreadedDestWorker *self,
                                             gint worker_index);
 void log_threaded_dest_worker_free_method(LogThreadedDestWorker *self);
 void log_threaded_dest_worker_free(LogThreadedDestWorker *self);
+
+void log_threaded_dest_driver_add_inserted_message_length(LogThreadedDestDriver *self, gsize msg_length);
 
 gboolean log_threaded_dest_driver_deinit_method(LogPipe *s);
 gboolean log_threaded_dest_driver_init_method(LogPipe *s);
