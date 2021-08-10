@@ -477,6 +477,7 @@ log_source_init(LogPipe *s)
   stats_register_counter(self->options->stats_level, &sc_key,
                          SC_TYPE_PROCESSED, &self->recvd_messages);
   stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_STAMP, &self->last_message_seen);
+  stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_LARGEST_MESSAGE, &self->largest_message);
 
   _register_window_stats(self);
 
@@ -496,6 +497,7 @@ log_source_deinit(LogPipe *s)
   stats_cluster_logpipe_key_set(&sc_key, self->options->stats_source | SCS_SOURCE, self->stats_id, self->stats_instance);
   stats_unregister_counter(&sc_key, SC_TYPE_PROCESSED, &self->recvd_messages);
   stats_unregister_counter(&sc_key, SC_TYPE_STAMP, &self->last_message_seen);
+  stats_unregister_counter(&sc_key, SC_TYPE_LARGEST_MESSAGE, &self->largest_message);
 
   _unregister_window_stats(self);
 
@@ -831,4 +833,12 @@ log_source_global_init(void)
     {
       msg_debug("nanosleep() is not accurate enough to introduce minor stalls on the reader side, multi-threaded performance may be affected");
     }
+}
+
+
+void
+log_source_add_inserted_message_length(LogSource *self, gsize msg_length)
+{
+  if(stats_counter_get(self->largest_message) < msg_length)
+    stats_counter_set(self->largest_message, msg_length);
 }

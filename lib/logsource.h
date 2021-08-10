@@ -81,6 +81,7 @@ struct _LogSource
   StatsCounterItem *stat_full_window;
   StatsCounterItem *last_message_seen;
   StatsCounterItem *recvd_messages;
+  StatsCounterItem *largest_message;
   StatsCluster *stat_window_size_cluster;
   StatsCluster *stat_full_window_cluster;
 
@@ -139,6 +140,7 @@ void log_source_disable_bookmark_saving(LogSource *self);
 void log_source_enable_dynamic_window(LogSource *self, DynamicWindowPool *window_ctr);
 void log_source_dynamic_window_update_statistics(LogSource *self);
 gboolean log_source_is_dynamic_window_enabled(LogSource *self);
+void log_source_add_inserted_message_length(LogSource *self, gsize msg_length);
 
 void log_source_global_init(void);
 

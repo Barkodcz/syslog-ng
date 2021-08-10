@@ -443,6 +443,7 @@ log_reader_handle_line(LogReader *self, const guchar *line, gint length, LogTran
 
   msg_debug("Incoming log entry",
             evt_tag_printf("line", "%.*s", length, line));
+  log_source_add_inserted_message_length(&self->super, length);
   /* use the current time to get the time zone offset */
   m = log_msg_new((gchar *) line, length,
                   &self->options->parse_options);
