@@ -39,6 +39,9 @@ static const gchar *tag_names[SC_TYPE_MAX] =
   /* [SC_TYPE_WRITTEN] = */ "written",
   /* [SC_TYPE_LARGEST] = */ "largest_size",
   /* [SC_TYPE_AVG] = */ "average_size",
+  /* [SC_TYPE_EPS_HOUR] = */ "EPS_last_hour",
+  /* [SC_TYPE_EPS_DAY] = */ "EPS_last_day",
+  /* [SC_TYPE_EPS_START] = */ "EPS_since_start",
 };
 
 static void

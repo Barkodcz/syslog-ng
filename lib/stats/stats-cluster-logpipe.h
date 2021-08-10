@@ -41,6 +41,9 @@ typedef enum
   SC_TYPE_WRITTEN, /* number of sent messages */
   SC_TYPE_LARGEST, /* largest size of sent message */
   SC_TYPE_AVG, /* average size of sent message */
+  SC_TYPE_EPS_HOUR, /* event per secound */
+  SC_TYPE_EPS_DAY, /* event per secound */
+  SC_TYPE_EPS_START, /* event per secound */
   SC_TYPE_MAX
 } StatsCounterGroupLogPipe;
 
