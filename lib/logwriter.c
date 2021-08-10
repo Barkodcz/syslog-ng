@@ -70,6 +70,9 @@ struct _LogWriter
   StatsCounterItem *suppressed_messages;
   StatsCounterItem *processed_messages;
   StatsCounterItem *written_messages;
+  StatsCounterItem *largest_message_size;
+  StatsCounterItem *avg_message_size;
+  gsize sum_message_size;
   struct
   {
     StatsCounterItem *count;
@@ -138,6 +141,17 @@ static void log_writer_free_proto(LogWriter *self);
 static void log_writer_set_proto(LogWriter *self, LogProtoClient *proto);
 static void log_writer_set_pending_proto(LogWriter *self, LogProtoClient *proto, gboolean present);
 
+
+static void
+log_writer_add_writed_message_length(LogWriter *self, gsize msg_length)
+{
+  if(stats_counter_get(self->largest_message_size) < msg_length)
+    stats_counter_set(self->largest_message_size, msg_length);
+  self->sum_message_size += msg_length;
+  gsize msg_count = stats_counter_get(self->written_messages);
+  if(msg_count < 1) msg_count = 1;
+  stats_counter_set(self->avg_message_size, (self->sum_message_size / msg_count));
+}
 
 static void
 log_writer_msg_ack(gint num_msg_acked, gpointer user_data)
@@ -1167,6 +1181,7 @@ log_writer_write_message(LogWriter *self, LogMessage *msg, LogPathOptions *path_
       msg_debug("Outgoing message",
                 evt_tag_printf("message", "%s", self->line_buffer->str));
     }
+  log_writer_add_writed_message_length(self, self->line_buffer->len);
 
   if (self->line_buffer->len)
     {
@@ -1403,6 +1418,8 @@ _register_counters(LogWriter *self)
     stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_DROPPED, &self->dropped_messages);
     stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_PROCESSED, &self->processed_messages);
     stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_WRITTEN, &self->written_messages);
+    stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_LARGEST, &self->largest_message_size);
+    stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_AVG, &self->avg_message_size);
     log_queue_register_stats_counters(self->queue, self->options->stats_level, &sc_key);
 
     StatsClusterKey sc_key_truncated_count;
@@ -1452,6 +1469,7 @@ log_writer_init(LogPipe *s)
       log_writer_postpone_mark_timer(self);
     }
 
+  self->sum_message_size = 0;
   return TRUE;
 }
 
@@ -1468,6 +1486,8 @@ _unregister_counters(LogWriter *self)
     stats_unregister_counter(&sc_key, SC_TYPE_SUPPRESSED, &self->suppressed_messages);
     stats_unregister_counter(&sc_key, SC_TYPE_PROCESSED, &self->processed_messages);
     stats_unregister_counter(&sc_key, SC_TYPE_WRITTEN, &self->written_messages);
+    stats_unregister_counter(&sc_key, SC_TYPE_LARGEST, &self->largest_message_size);
+    stats_unregister_counter(&sc_key, SC_TYPE_AVG, &self->avg_message_size);
 
     StatsClusterKey sc_key_truncated_count;
     stats_cluster_single_key_set_with_name(&sc_key_truncated_count, self->options->stats_source | SCS_DESTINATION,
