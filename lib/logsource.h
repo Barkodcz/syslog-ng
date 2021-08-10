@@ -83,6 +83,9 @@ struct _LogSource
   StatsCounterItem *recvd_messages;
   StatsCluster *stat_window_size_cluster;
   StatsCluster *stat_full_window_cluster;
+  StatsCounterItem *largest_message_size;
+  StatsCounterItem *avg_message_size;
+  gsize sum_message_size;
 
   guint32 last_ack_count;
   guint32 ack_count;
@@ -141,6 +144,8 @@ void log_source_dynamic_window_update_statistics(LogSource *self);
 gboolean log_source_is_dynamic_window_enabled(LogSource *self);
 
 void log_source_global_init(void);
+
+void log_source_add_inserted_message_length(LogSource *self, gsize msg_length);
 
 /* protected */
 void log_source_dynamic_window_realloc(LogSource *self);

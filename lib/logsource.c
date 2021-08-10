@@ -477,11 +477,14 @@ log_source_init(LogPipe *s)
   stats_register_counter(self->options->stats_level, &sc_key,
                          SC_TYPE_PROCESSED, &self->recvd_messages);
   stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_STAMP, &self->last_message_seen);
+  stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_LARGEST, &self->largest_message_size);
+  stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_AVG, &self->avg_message_size);
 
   _register_window_stats(self);
 
   stats_unlock();
 
+  self->sum_message_size = 0;
   return TRUE;
 }
 
@@ -496,6 +499,8 @@ log_source_deinit(LogPipe *s)
   stats_cluster_logpipe_key_set(&sc_key, self->options->stats_source | SCS_SOURCE, self->stats_id, self->stats_instance);
   stats_unregister_counter(&sc_key, SC_TYPE_PROCESSED, &self->recvd_messages);
   stats_unregister_counter(&sc_key, SC_TYPE_STAMP, &self->last_message_seen);
+  stats_unregister_counter(&sc_key, SC_TYPE_LARGEST, &self->largest_message_size);
+  stats_unregister_counter(&sc_key, SC_TYPE_AVG, &self->avg_message_size);
 
   _unregister_window_stats(self);
 
@@ -831,4 +836,15 @@ log_source_global_init(void)
     {
       msg_debug("nanosleep() is not accurate enough to introduce minor stalls on the reader side, multi-threaded performance may be affected");
     }
+}
+
+void
+log_source_add_inserted_message_length(LogSource *self, gsize msg_length)
+{
+  if(stats_counter_get(self->largest_message_size) < msg_length)
+    stats_counter_set(self->largest_message_size, msg_length);
+  self->sum_message_size += msg_length;
+  gsize msg_count = stats_counter_get(self->recvd_messages);
+  if(msg_count < 1) msg_count = 1;
+  stats_counter_set(self->avg_message_size, (self->sum_message_size / msg_count));
 }
