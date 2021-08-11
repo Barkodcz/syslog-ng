@@ -108,6 +108,9 @@ struct _LogThreadedDestDriver
   StatsCounterItem *dropped_messages;
   StatsCounterItem *processed_messages;
   StatsCounterItem *written_messages;
+  StatsCounterItem *largest_message_size;
+  StatsCounterItem *avg_message_size;
+  gsize sum_message_size;
 
   gint batch_lines;
   gint batch_timeout;
@@ -232,6 +235,8 @@ gboolean log_threaded_dest_driver_start_workers(LogPipe *s);
 
 void log_threaded_dest_driver_init_instance(LogThreadedDestDriver *self, GlobalConfig *cfg);
 void log_threaded_dest_driver_free(LogPipe *s);
+
+void log_threaded_dest_inserted_message_length(LogThreadedDestDriver *self, gsize msg_length);
 
 void log_threaded_dest_driver_set_max_retries_on_error(LogDriver *s, gint max_retries);
 void log_threaded_dest_driver_set_num_workers(LogDriver *s, gint num_workers);
