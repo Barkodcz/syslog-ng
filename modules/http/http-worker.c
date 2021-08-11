@@ -508,6 +508,8 @@ _curl_perform_request(HTTPDestinationWorker *self, HTTPLoadBalancerTarget *targe
   curl_easy_setopt(self->curl, CURLOPT_URL, target->url);
   curl_easy_setopt(self->curl, CURLOPT_HTTPHEADER, http_curl_header_list_as_slist(self->request_headers));
   curl_easy_setopt(self->curl, CURLOPT_POSTFIELDS, self->request_body->str);
+  gsize msg_length = self->request_body->len;
+  log_threaded_dest_inserted_message_length(self->super.owner, msg_length);
 
   CURLcode ret = curl_easy_perform(self->curl);
   if (ret != CURLE_OK)
