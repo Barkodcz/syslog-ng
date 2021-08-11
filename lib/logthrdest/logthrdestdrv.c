@@ -1009,6 +1009,8 @@ _register_stats(LogThreadedDestDriver *self)
     stats_register_counter(0, &sc_key, SC_TYPE_DROPPED, &self->dropped_messages);
     stats_register_counter(0, &sc_key, SC_TYPE_PROCESSED, &self->processed_messages);
     stats_register_counter(0, &sc_key, SC_TYPE_WRITTEN, &self->written_messages);
+    stats_register_counter(0, &sc_key, SC_TYPE_LARGEST, &self->largest_message_size);
+    stats_register_counter(0, &sc_key, SC_TYPE_AVG, &self->avg_message_size);
   }
   stats_unlock();
 }
@@ -1024,6 +1026,8 @@ _unregister_stats(LogThreadedDestDriver *self)
     stats_unregister_counter(&sc_key, SC_TYPE_DROPPED, &self->dropped_messages);
     stats_unregister_counter(&sc_key, SC_TYPE_PROCESSED, &self->processed_messages);
     stats_unregister_counter(&sc_key, SC_TYPE_WRITTEN, &self->written_messages);
+    stats_unregister_counter(&sc_key, SC_TYPE_LARGEST, &self->largest_message_size);
+    stats_unregister_counter(&sc_key, SC_TYPE_AVG, &self->avg_message_size);
   }
   stats_unlock();
 }
@@ -1154,10 +1158,23 @@ log_threaded_dest_driver_init_instance(LogThreadedDestDriver *self, GlobalConfig
   self->batch_timeout = -1;
   self->num_workers = 1;
   self->last_worker = 0;
+  self->sum_message_size = 0;
 
   self->retries_on_error_max = MAX_RETRIES_ON_ERROR_DEFAULT;
   self->retries_max = MAX_RETRIES_BEFORE_SUSPEND_DEFAULT;
   self->lock = g_mutex_new();
   log_threaded_dest_worker_init_instance(&self->worker.instance, self, 0);
   _init_worker_compat_layer(&self->worker.instance);
+}
+
+void
+log_threaded_dest_inserted_message_length(LogThreadedDestDriver *self, gsize msg_length)
+{
+  if(stats_counter_get(self->largest_message_size) < msg_length)
+    stats_counter_set(self->largest_message_size, msg_length);
+
+  self->sum_message_size += msg_length;
+  gsize msg_count = stats_counter_get(self->written_messages);
+  if(msg_count < 1) msg_count = 1;
+  stats_counter_set(self->avg_message_size, (self->sum_message_size / msg_count));
 }
