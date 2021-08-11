@@ -485,6 +485,7 @@ log_source_init(LogPipe *s)
   stats_unlock();
 
   self->sum_message_size = 0;
+  init_stats_eps_item(&self->eps_item, &sc_key, self->recvd_messages);
   return TRUE;
 }
 
@@ -505,7 +506,7 @@ log_source_deinit(LogPipe *s)
   _unregister_window_stats(self);
 
   stats_unlock();
-
+  deinit_stats_eps_item(&self->eps_item, &sc_key);
   return TRUE;
 }
 

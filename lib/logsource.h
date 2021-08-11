@@ -27,6 +27,7 @@
 
 #include "logpipe.h"
 #include "stats/stats-registry.h"
+#include "stats/stats-eps.h"
 #include "window-size-counter.h"
 #include "dynamic-window.h"
 
@@ -96,6 +97,7 @@ struct _LogSource
 
   void (*wakeup)(LogSource *s);
   void (*schedule_dynamic_window_realloc)(LogSource *s);
+  StatsEPSItem eps_item;  
 };
 
 static inline gboolean

@@ -28,6 +28,7 @@
 #include "syslog-ng.h"
 #include "driver.h"
 #include "stats/stats-registry.h"
+#include "stats/stats-eps.h"
 #include "logqueue.h"
 #include "mainloop-worker.h"
 #include "seqnum.h"
@@ -152,6 +153,7 @@ struct _LogThreadedDestDriver
 
   WorkerOptions worker_options;
   const gchar *(*format_stats_instance)(LogThreadedDestDriver *s);
+  StatsEPSItem eps_item;
 };
 
 static inline gboolean

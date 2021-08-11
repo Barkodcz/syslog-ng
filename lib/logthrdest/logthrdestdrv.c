@@ -1062,6 +1062,15 @@ _create_workers(LogThreadedDestDriver *self)
   return TRUE;
 }
 
+static void
+_init_eps(LogThreadedDestDriver *self)
+{
+  StatsClusterKey sc_key;
+
+  _init_stats_key(self, &sc_key);
+  init_stats_eps_item(&self->eps_item, &sc_key, self->written_messages);
+}
+
 gboolean
 log_threaded_dest_driver_init_method(LogPipe *s)
 {
@@ -1086,6 +1095,7 @@ log_threaded_dest_driver_init_method(LogPipe *s)
   if (!_create_workers(self))
     return FALSE;
 
+  _init_eps(self);
   return TRUE;
 }
 
@@ -1104,6 +1114,15 @@ log_threaded_dest_driver_start_workers(LogPipe *s)
         return FALSE;
     }
   return TRUE;
+}
+
+static void
+_deinit_eps(LogThreadedDestDriver *self)
+{
+  StatsClusterKey sc_key;
+
+  _init_stats_key(self, &sc_key);
+  deinit_stats_eps_item(&self->eps_item, &sc_key);
 }
 
 gboolean
@@ -1126,6 +1145,7 @@ log_threaded_dest_driver_deinit_method(LogPipe *s)
         log_threaded_dest_worker_free(self->workers[i]);
     }
 
+  _deinit_eps(self);
   return log_dest_driver_deinit_method(s);
 }
 

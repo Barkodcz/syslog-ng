@@ -39,6 +39,7 @@
 #include "scratch-buffers.h"
 #include "timeutils/format.h"
 #include "timeutils/misc.h"
+#include "stats/stats-eps.h"
 
 #include <assert.h>
 #include <string.h>
@@ -104,6 +105,7 @@ struct _LogWriter
   gboolean pending_proto_present;
   GCond *pending_proto_cond;
   GStaticMutex pending_proto_lock;
+  StatsEPSItem eps_item;
 };
 
 /**
@@ -1405,13 +1407,19 @@ log_writer_init_watches(LogWriter *self)
 }
 
 static void
+_get_sc_key(LogWriter *self, StatsClusterKey *sc_key)
+{
+  stats_cluster_logpipe_key_set(sc_key, self->options->stats_source | SCS_DESTINATION, self->stats_id,
+                                self->stats_instance);
+}
+
+static void
 _register_counters(LogWriter *self)
 {
   stats_lock();
   {
     StatsClusterKey sc_key;
-    stats_cluster_logpipe_key_set(&sc_key, self->options->stats_source | SCS_DESTINATION, self->stats_id,
-                                  self->stats_instance);
+    _get_sc_key(self, &sc_key);
 
     if (self->options->suppress > 0)
       stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_SUPPRESSED, &self->suppressed_messages);
@@ -1451,7 +1459,9 @@ log_writer_init(LogPipe *s)
 
   if ((self->options->options & LWO_NO_STATS) == 0 && !self->dropped_messages)
     _register_counters(self);
-
+  StatsClusterKey sc_key;
+  _get_sc_key(self, &sc_key);
+  init_stats_eps_item(&self->eps_item, &sc_key, self->written_messages);
   if (self->proto)
     {
       LogProtoClient *proto;
@@ -1479,8 +1489,7 @@ _unregister_counters(LogWriter *self)
   stats_lock();
   {
     StatsClusterKey sc_key;
-    stats_cluster_logpipe_key_set(&sc_key, self->options->stats_source | SCS_DESTINATION, self->stats_id,
-                                  self->stats_instance);
+    _get_sc_key(self, &sc_key);
 
     stats_unregister_counter(&sc_key, SC_TYPE_DROPPED, &self->dropped_messages);
     stats_unregister_counter(&sc_key, SC_TYPE_SUPPRESSED, &self->suppressed_messages);
@@ -1511,6 +1520,9 @@ log_writer_deinit(LogPipe *s)
   LogWriter *self = (LogWriter *) s;
 
   main_loop_assert_main_thread();
+  StatsClusterKey sc_key;
+  _get_sc_key(self, &sc_key);
+  deinit_stats_eps_item(&self->eps_item, &sc_key);
 
   log_queue_reset_parallel_push(self->queue);
   log_writer_forced_flush(self);
