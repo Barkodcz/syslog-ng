@@ -125,7 +125,7 @@ _update(void *cookie)
 }
 
 void
-init_stats_eps_item(StatsEPSItem *self, StatsClusterKey *sc_key, StatsCounterItem *counter)
+init_stats_eps_item(StatsEPSItem *self, StatsClusterKey *sc_key, StatsCounterItem *counter, gint level)
 {
   self->sum_count_hour = 0;
   self->avg_count_hour = 0;
@@ -136,9 +136,9 @@ init_stats_eps_item(StatsEPSItem *self, StatsClusterKey *sc_key, StatsCounterIte
 
   self->message_count_stats = counter;
   stats_lock();
-  stats_register_counter(0, sc_key, SC_TYPE_EPS_DAY, &self->eps_stats_day);
-  stats_register_counter(0, sc_key, SC_TYPE_EPS_HOUR, &self->eps_stats_hour);
-  stats_register_counter(0, sc_key, SC_TYPE_EPS_START, &self->eps_stats_start);
+  stats_register_counter(level, sc_key, SC_TYPE_EPS_DAY, &self->eps_stats_day);
+  stats_register_counter(level, sc_key, SC_TYPE_EPS_HOUR, &self->eps_stats_hour);
+  stats_register_counter(level, sc_key, SC_TYPE_EPS_START, &self->eps_stats_start);
   stats_unlock();
 
   _init_timer(self);

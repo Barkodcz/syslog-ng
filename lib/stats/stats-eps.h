@@ -29,7 +29,7 @@ typedef struct
   StatsClusterKey *sc_key;
 } StatsEPSItem;
 
-void init_stats_eps_item(StatsEPSItem *item, StatsClusterKey *sc_key, StatsCounterItem *counter);
+void init_stats_eps_item(StatsEPSItem *item, StatsClusterKey *sc_key, StatsCounterItem *counter, gint level);
 void deinit_stats_eps_item(StatsEPSItem *item, StatsClusterKey *sc_key);
 
 #endif /* STATS_EPS_H */
