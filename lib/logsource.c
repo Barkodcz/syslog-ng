@@ -477,6 +477,7 @@ log_source_init(LogPipe *s)
   stats_register_counter(self->options->stats_level, &sc_key,
                          SC_TYPE_PROCESSED, &self->recvd_messages);
   stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_STAMP, &self->last_message_seen);
+  stats_register_average(self->options->stats_level, &sc_key, SC_TYPE_AVEREAGE, &self->average_message_size);
 
   _register_window_stats(self);
 
@@ -496,6 +497,7 @@ log_source_deinit(LogPipe *s)
   stats_cluster_logpipe_key_set(&sc_key, self->options->stats_source | SCS_SOURCE, self->stats_id, self->stats_instance);
   stats_unregister_counter(&sc_key, SC_TYPE_PROCESSED, &self->recvd_messages);
   stats_unregister_counter(&sc_key, SC_TYPE_STAMP, &self->last_message_seen);
+  stats_unregister_average(&sc_key, SC_TYPE_AVEREAGE, &self->average_message_size);
 
   _unregister_window_stats(self);
 

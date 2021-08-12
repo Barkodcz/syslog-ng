@@ -24,6 +24,7 @@
 
 #include "logwriter.h"
 #include "messages.h"
+#include "stats/stats-avg.h"
 #include "stats/stats-registry.h"
 #include "stats/stats-cluster-single.h"
 #include "hostname.h"
@@ -70,6 +71,7 @@ struct _LogWriter
   StatsCounterItem *suppressed_messages;
   StatsCounterItem *processed_messages;
   StatsCounterItem *written_messages;
+  StatsAverageItem average_message_size;
   struct
   {
     StatsCounterItem *count;
@@ -1170,9 +1172,13 @@ log_writer_write_message(LogWriter *self, LogMessage *msg, LogPathOptions *path_
 
   if (self->line_buffer->len)
     {
+      gssize msg_len = self->line_buffer->len;
       LogProtoStatus status = log_proto_client_post(self->proto, msg, (guchar *)self->line_buffer->str,
                                                     self->line_buffer->len,
                                                     &consumed);
+
+      if (status == LPS_SUCCESS)
+        stats_average_add(&self->average_message_size, msg_len);
 
       self->partial_write = (status == LPS_PARTIAL);
 
@@ -1403,6 +1409,7 @@ _register_counters(LogWriter *self)
     stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_DROPPED, &self->dropped_messages);
     stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_PROCESSED, &self->processed_messages);
     stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_WRITTEN, &self->written_messages);
+    stats_register_average(self->options->stats_level, &sc_key, SC_TYPE_AVEREAGE, &self->average_message_size);
     log_queue_register_stats_counters(self->queue, self->options->stats_level, &sc_key);
 
     StatsClusterKey sc_key_truncated_count;
@@ -1468,6 +1475,7 @@ _unregister_counters(LogWriter *self)
     stats_unregister_counter(&sc_key, SC_TYPE_SUPPRESSED, &self->suppressed_messages);
     stats_unregister_counter(&sc_key, SC_TYPE_PROCESSED, &self->processed_messages);
     stats_unregister_counter(&sc_key, SC_TYPE_WRITTEN, &self->written_messages);
+    stats_unregister_average(&sc_key, SC_TYPE_AVEREAGE, &self->average_message_size);
 
     StatsClusterKey sc_key_truncated_count;
     stats_cluster_single_key_set_with_name(&sc_key_truncated_count, self->options->stats_source | SCS_DESTINATION,
