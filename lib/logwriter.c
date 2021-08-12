@@ -1523,9 +1523,13 @@ log_writer_deinit(LogPipe *s)
   LogWriter *self = (LogWriter *) s;
 
   main_loop_assert_main_thread();
-  StatsClusterKey sc_key;
-  _get_sc_key(self, &sc_key);
-  deinit_stats_eps_item(&self->eps_item, &sc_key);
+
+  if ((self->options->options & LWO_NO_STATS) == 0 && !self->dropped_messages)
+  {
+    StatsClusterKey sc_key;
+    _get_sc_key(self, &sc_key);
+    deinit_stats_eps_item(&self->eps_item, &sc_key);
+  }
 
   log_queue_reset_parallel_push(self->queue);
   log_writer_forced_flush(self);
