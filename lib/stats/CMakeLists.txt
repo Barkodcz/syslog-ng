@@ -2,6 +2,7 @@ set(STATS_HEADERS
     stats/stats.h
     stats/stats-control.h
     stats/stats-counter.h
+    stats/stats-avg.h
     stats/stats-cluster.h
     stats/stats-csv.h
     stats/stats-log.h
