@@ -27,6 +27,7 @@ typedef struct
   StatsCounterItem *eps_stats_start;
   StatsCounterItem *message_count_stats;
   StatsClusterKey *sc_key;
+  gchar *name;
 } StatsEPSItem;
 
 void init_stats_eps_item(StatsEPSItem *item, StatsClusterKey *sc_key, StatsCounterItem *counter, gint level);

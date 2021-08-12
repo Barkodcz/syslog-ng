@@ -86,6 +86,7 @@ add_counts(StatsEPSItem *self, gsize count)
 static void
 get_EPS(StatsEPSItem *item, gsize msg_count, gsize *one_hour, gsize *one_day, gsize *from_start)
 {
+  msg_error("[+] stats-eps.c - get_EPS() | begin");
   time_t now = cached_g_current_time_sec();
   gsize elipsed_time = (gsize)_calc_sec_between_time(&item->init_time, &now);
 
@@ -105,11 +106,25 @@ get_EPS(StatsEPSItem *item, gsize msg_count, gsize *one_hour, gsize *one_day, gs
              :
              (item->sum_count_day / DAY_IN_SEC);
   item->avg_count_day = *one_day;
+
+  msg_error("[+] stats-eps.c - getEPS() | values:",
+            evt_tag_long("elipsed_time", elipsed_time),
+            evt_tag_long("from_start", *from_start),
+            evt_tag_long("msg_count", msg_count),
+            evt_tag_long("one_hour_avg", item->avg_count_day),
+            evt_tag_long("one_hour_sum", item->sum_count_day),
+            evt_tag_long("one_day_avg", item->avg_count_day),
+            evt_tag_long("one_day_sum", item->avg_count_day),
+            evt_tag_str("eps_name", item->name)
+            );
+
+  msg_error("[+] stats-eps.c - get_EPS() | end");
 }
 
 static void
 _update(void *cookie)
 {
+  msg_error("[+] stats-eps.c - _update() | begin");
   StatsEPSItem *self = (StatsEPSItem *) cookie;
   gsize msg_count = stats_counter_get(self->message_count_stats);
   add_counts(self, msg_count);
@@ -122,11 +137,20 @@ _update(void *cookie)
   stats_counter_set(self->eps_stats_start, from_start);
 
   _start_timer(self);
+  msg_error("[+] stats-eps.c - _update() | end");
 }
 
 void
 init_stats_eps_item(StatsEPSItem *self, StatsClusterKey *sc_key, StatsCounterItem *counter, gint level)
 {
+  msg_error("[+] stats-eps.c - init_Stats_eps_item() | begin");
+  msg_error("[+] stats-eps.c - init_Stats_eps_item() | value:",
+            evt_tag_str("sc_key.id", sc_key->id),
+            evt_tag_str("sc_key.instance", sc_key->instance)
+            );
+  gsize buf_len = sizeof(sc_key->id)+sizeof(sc_key->instance)+1;
+  self->name = (gchar *)malloc(buf_len);
+  g_snprintf(self->name, buf_len, "%s;%s", sc_key->id, sc_key->instance);
   self->sum_count_hour = 0;
   self->avg_count_hour = 0;
   self->sum_count_day = 0;
@@ -143,6 +167,7 @@ init_stats_eps_item(StatsEPSItem *self, StatsClusterKey *sc_key, StatsCounterIte
 
   _init_timer(self);
   _start_timer(self);
+  msg_error("[+] stats-eps.c - init_Stats_eps_item() | end");
 }
 
 void
@@ -155,4 +180,5 @@ deinit_stats_eps_item(StatsEPSItem *self, StatsClusterKey *sc_key)
   stats_unregister_counter(sc_key, SC_TYPE_EPS_HOUR, &self->eps_stats_hour);
   stats_unregister_counter(sc_key, SC_TYPE_EPS_START, &self->eps_stats_start);
   stats_unlock();
+  g_free(self->name);
 }
