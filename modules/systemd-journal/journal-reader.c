@@ -265,6 +265,8 @@ _handle_message(JournalReader *self)
   gpointer args[] = {msg, self->options};
 
   journald_foreach_data(self->journal, _handle_data, args);
+  gsize msg_length = log_msg_get_size(msg);
+  log_source_add_inserted_message_length(&self->super, msg_length);
   _set_message_timestamp(self, msg);
   _set_program(self->options, msg);
 
