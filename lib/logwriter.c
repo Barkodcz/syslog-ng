@@ -1458,10 +1458,13 @@ log_writer_init(LogPipe *s)
   iv_event_register(&self->queue_filled);
 
   if ((self->options->options & LWO_NO_STATS) == 0 && !self->dropped_messages)
-    _register_counters(self);
-  StatsClusterKey sc_key;
-  _get_sc_key(self, &sc_key);
-  init_stats_eps_item(&self->eps_item, &sc_key, self->written_messages);
+    {
+      _register_counters(self);
+      StatsClusterKey sc_key;
+      _get_sc_key(self, &sc_key);
+      init_stats_eps_item(&self->eps_item, &sc_key, self->written_messages, self->options->stats_level);
+    }
+
   if (self->proto)
     {
       LogProtoClient *proto;

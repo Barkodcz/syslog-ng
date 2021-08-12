@@ -485,7 +485,7 @@ log_source_init(LogPipe *s)
   stats_unlock();
 
   self->sum_message_size = 0;
-  init_stats_eps_item(&self->eps_item, &sc_key, self->recvd_messages);
+  init_stats_eps_item(&self->eps_item, &sc_key, self->recvd_messages, self->options->stats_level);
   return TRUE;
 }
 

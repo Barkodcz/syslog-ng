@@ -1068,7 +1068,7 @@ _init_eps(LogThreadedDestDriver *self)
   StatsClusterKey sc_key;
 
   _init_stats_key(self, &sc_key);
-  init_stats_eps_item(&self->eps_item, &sc_key, self->written_messages);
+  init_stats_eps_item(&self->eps_item, &sc_key, self->written_messages, 0);
 }
 
 gboolean
