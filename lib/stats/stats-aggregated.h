@@ -51,4 +51,10 @@ void stats_aggregated_free(StatsAggregatedItem *self);
 
 void stats_aggregated_item_init(StatsAggregatedItem *self);
 
+void stats_aggregated_maximum_create_stats_key(StatsClusterKey *key, guint16 component, const gchar *id,
+                                               const gchar *instance);
+void stats_init_aggregated_maximum(gint level, guint16 component, const gchar *id, const gchar *instance,
+                                   StatsAggregatedItem **s);
+void stats_deinit_aggregated_maximum(StatsAggregatedItem *s);
+
 #endif /* STATS_AGGREGATED_H */
