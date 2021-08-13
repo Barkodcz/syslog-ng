@@ -29,6 +29,7 @@
 #include "driver.h"
 #include "stats/stats-registry.h"
 #include "stats/stats-avg.h"
+#include "stats/stats-largest.h"
 #include "logqueue.h"
 #include "mainloop-worker.h"
 #include "seqnum.h"
@@ -110,6 +111,7 @@ struct _LogThreadedDestDriver
   StatsCounterItem *processed_messages;
   StatsCounterItem *written_messages;
   StatsAverageItem average_message_size;
+  StatsLargestItem largest_message_size;
 
   gint batch_lines;
   gint batch_timeout;

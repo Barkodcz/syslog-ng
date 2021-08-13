@@ -478,6 +478,7 @@ log_source_init(LogPipe *s)
                          SC_TYPE_PROCESSED, &self->recvd_messages);
   stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_STAMP, &self->last_message_seen);
   stats_register_average(self->options->stats_level, &sc_key, SC_TYPE_AVEREAGE, &self->average_message_size);
+  stats_register_largest(self->options->stats_level, &sc_key, SC_TYPE_LARGEST_MSG_SIZE, &self->largest_message_size);
 
   _register_window_stats(self);
 
@@ -498,6 +499,7 @@ log_source_deinit(LogPipe *s)
   stats_unregister_counter(&sc_key, SC_TYPE_PROCESSED, &self->recvd_messages);
   stats_unregister_counter(&sc_key, SC_TYPE_STAMP, &self->last_message_seen);
   stats_unregister_average(&sc_key, SC_TYPE_AVEREAGE, &self->average_message_size);
+  stats_unregister_largest(&sc_key, SC_TYPE_LARGEST_MSG_SIZE, &self->largest_message_size);
 
   _unregister_window_stats(self);
 

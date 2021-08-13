@@ -522,6 +522,7 @@ log_reader_fetch_log(LogReader *self)
           msg_count++;
 
           stats_average_add(&self->super.average_message_size, msg_len);
+          stats_largest_add(&self->super.largest_message_size, msg_len);
           if (!log_reader_handle_line(self, msg, msg_len, &aux))
             {
               /* window is full, don't generate further messages */

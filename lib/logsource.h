@@ -28,6 +28,7 @@
 #include "logpipe.h"
 #include "stats/stats-registry.h"
 #include "stats/stats-avg.h"
+#include "stats/stats-largest.h"
 #include "window-size-counter.h"
 #include "dynamic-window.h"
 
@@ -83,6 +84,7 @@ struct _LogSource
   StatsCounterItem *last_message_seen;
   StatsCounterItem *recvd_messages;
   StatsAverageItem average_message_size;
+  StatsLargestItem largest_message_size;
   StatsCluster *stat_window_size_cluster;
   StatsCluster *stat_full_window_cluster;
 

@@ -267,6 +267,7 @@ _handle_message(JournalReader *self)
   journald_foreach_data(self->journal, _handle_data, args);
   gsize msg_len = log_msg_get_size(msg);
   stats_average_add(&self->super.average_message_size, msg_len);
+  stats_largest_add(&self->super.largest_message_size, msg_len);
   _set_message_timestamp(self, msg);
   _set_program(self->options, msg);
 

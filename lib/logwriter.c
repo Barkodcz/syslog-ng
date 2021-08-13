@@ -25,6 +25,7 @@
 #include "logwriter.h"
 #include "messages.h"
 #include "stats/stats-avg.h"
+#include "stats/stats-largest.h"
 #include "stats/stats-registry.h"
 #include "stats/stats-cluster-single.h"
 #include "hostname.h"
@@ -72,6 +73,7 @@ struct _LogWriter
   StatsCounterItem *processed_messages;
   StatsCounterItem *written_messages;
   StatsAverageItem average_message_size;
+  StatsLargestItem largest_message_size;
   struct
   {
     StatsCounterItem *count;
@@ -1178,7 +1180,10 @@ log_writer_write_message(LogWriter *self, LogMessage *msg, LogPathOptions *path_
                                                     &consumed);
 
       if (status == LPS_SUCCESS)
+      {
         stats_average_add(&self->average_message_size, msg_len);
+        stats_largest_add(&self->largest_message_size, msg_len);
+      }
 
       self->partial_write = (status == LPS_PARTIAL);
 
@@ -1410,6 +1415,7 @@ _register_counters(LogWriter *self)
     stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_PROCESSED, &self->processed_messages);
     stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_WRITTEN, &self->written_messages);
     stats_register_average(self->options->stats_level, &sc_key, SC_TYPE_AVEREAGE, &self->average_message_size);
+    stats_register_largest(self->options->stats_level, &sc_key, SC_TYPE_LARGEST_MSG_SIZE, &self->largest_message_size);
     log_queue_register_stats_counters(self->queue, self->options->stats_level, &sc_key);
 
     StatsClusterKey sc_key_truncated_count;
@@ -1476,6 +1482,7 @@ _unregister_counters(LogWriter *self)
     stats_unregister_counter(&sc_key, SC_TYPE_PROCESSED, &self->processed_messages);
     stats_unregister_counter(&sc_key, SC_TYPE_WRITTEN, &self->written_messages);
     stats_unregister_average(&sc_key, SC_TYPE_AVEREAGE, &self->average_message_size);
+    stats_unregister_largest(&sc_key, SC_TYPE_LARGEST_MSG_SIZE, &self->largest_message_size);
 
     StatsClusterKey sc_key_truncated_count;
     stats_cluster_single_key_set_with_name(&sc_key_truncated_count, self->options->stats_source | SCS_DESTINATION,

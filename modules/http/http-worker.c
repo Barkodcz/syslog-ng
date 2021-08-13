@@ -511,6 +511,7 @@ _curl_perform_request(HTTPDestinationWorker *self, HTTPLoadBalancerTarget *targe
 
   gssize msg_len = self->request_body->len;
   stats_average_add(&self->super.owner->average_message_size, msg_len);
+  stats_largest_add(&self->super.owner->largest_message_size, msg_len);
 
   CURLcode ret = curl_easy_perform(self->curl);
   if (ret != CURLE_OK)

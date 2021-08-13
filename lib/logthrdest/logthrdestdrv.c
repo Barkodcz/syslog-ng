@@ -1010,6 +1010,7 @@ _register_stats(LogThreadedDestDriver *self)
     stats_register_counter(0, &sc_key, SC_TYPE_PROCESSED, &self->processed_messages);
     stats_register_counter(0, &sc_key, SC_TYPE_WRITTEN, &self->written_messages);
     stats_register_average(0, &sc_key, SC_TYPE_AVEREAGE, &self->average_message_size);
+    stats_register_largest(0, &sc_key, SC_TYPE_LARGEST_MSG_SIZE, &self->largest_message_size);
   }
   stats_unlock();
 }
@@ -1026,6 +1027,7 @@ _unregister_stats(LogThreadedDestDriver *self)
     stats_unregister_counter(&sc_key, SC_TYPE_PROCESSED, &self->processed_messages);
     stats_unregister_counter(&sc_key, SC_TYPE_WRITTEN, &self->written_messages);
     stats_unregister_average(&sc_key, SC_TYPE_AVEREAGE, &self->average_message_size);
+    stats_unregister_largest(&sc_key, SC_TYPE_LARGEST_MSG_SIZE, &self->largest_message_size);
   }
   stats_unlock();
 }
