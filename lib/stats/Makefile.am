@@ -7,6 +7,7 @@ statsinclude_HEADERS = \
 	lib/stats/stats-control.h		\
 	lib/stats/stats-counter.h		\
 	lib/stats/stats-avg.h			\
+	lib/stats/stats-largest.h		\
 	lib/stats/stats-cluster.h		\
 	lib/stats/stats-csv.h			\
 	lib/stats/stats-log.h			\

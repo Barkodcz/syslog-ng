@@ -3,6 +3,7 @@ set(STATS_HEADERS
     stats/stats-control.h
     stats/stats-counter.h
     stats/stats-avg.h
+    stats/stats-largest.h
     stats/stats-cluster.h
     stats/stats-csv.h
     stats/stats-log.h

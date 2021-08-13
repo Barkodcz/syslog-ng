@@ -38,6 +38,7 @@ static const gchar *tag_names[SC_TYPE_MAX] =
   /* [SC_TYPE_NOT_MATCHED] = */ "not_matched",
   /* [SC_TYPE_WRITTEN] = */ "written",
   /* [SC_TYPE_AVEREAGE] = */ "average",
+  /* [SC_TYPE_LARGEST_MSG_SIZE] = */ "largest_msg_size",
 };
 
 static void
