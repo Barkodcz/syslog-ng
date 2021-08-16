@@ -57,4 +57,10 @@ void stats_init_aggregated_maximum(gint level, guint16 component, const gchar *i
                                    StatsAggregatedItem **s);
 void stats_deinit_aggregated_maximum(StatsAggregatedItem *s);
 
+void stats_aggregated_average_create_stats_key(StatsClusterKey *key, guint16 component, const gchar *id,
+                                               const gchar *instance);
+void stats_init_aggregated_average(gint level, guint16 component, const gchar *id, const gchar *instance,
+                                   StatsAggregatedItem **s);
+void stats_deinit_aggregated_average(StatsAggregatedItem *s);
+
 #endif /* STATS_AGGREGATED_H */
