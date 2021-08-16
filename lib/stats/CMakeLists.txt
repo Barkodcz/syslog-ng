@@ -4,6 +4,7 @@ set(STATS_HEADERS
     stats/stats-counter.h
     stats/stats-cluster.h
     stats/stats-aggregated.h
+    stats/stats-eps.h
     stats/stats-csv.h
     stats/stats-log.h
     stats/stats-registry.h
@@ -20,6 +21,7 @@ set(STATS_SOURCES
     stats/stats-aggregated.c
     stats/stats-average.c
     stats/stats-maximum.c
+    stats/stats-eps.c
     stats/stats-csv.c
     stats/stats-log.c
     stats/stats-registry.c

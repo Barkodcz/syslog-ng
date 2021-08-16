@@ -28,6 +28,9 @@
 #include "syslog-ng.h"
 #include "stats-cluster.h"
 
+#define HOUR_IN_SEC 3600 /* 60*60 */
+#define DAY_IN_SEC 86400 /* 60*60*24 */
+
 typedef struct _StatsAggregatedItem StatsAggregatedItem;
 
 struct _StatsAggregatedItem
@@ -62,5 +65,11 @@ void stats_aggregated_average_create_stats_key(StatsClusterKey *key, guint16 com
 void stats_init_aggregated_average(gint level, guint16 component, const gchar *id, const gchar *instance,
                                    StatsAggregatedItem **s);
 void stats_deinit_aggregated_average(StatsAggregatedItem *s);
+
+void stats_aggregated_eps_create_stats_key(StatsClusterKey *key, guint16 component, const gchar *id,
+                                           const gchar *instance);
+void stats_init_aggregated_eps(gint level, guint16 component, const gchar *id, const gchar *instance,
+                               StatsCounterItem *counter, StatsAggregatedItem **s);
+void stats_deinit_aggregated_eps(StatsAggregatedItem *s);
 
 #endif /* STATS_AGGREGATED_H */
