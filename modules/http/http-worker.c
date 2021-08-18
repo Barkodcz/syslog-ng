@@ -672,6 +672,10 @@ _flush(LogThreadedDestWorker *s, LogThreadedFlushMode mode)
       retval = _flush_on_target(self, target);
       if (retval == LTR_SUCCESS)
         {
+          gsize msg_length = self->request_body->len;
+          stats_aggregated_feed_input(self->super.owner->max_message_size, msg_length);
+          stats_aggregated_feed_input(self->super.owner->average_messages_size, msg_length);
+
           http_load_balancer_set_target_successful(owner->load_balancer, target);
           break;
         }

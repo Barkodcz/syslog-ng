@@ -28,6 +28,7 @@
 #include "syslog-ng.h"
 #include "driver.h"
 #include "stats/stats-registry.h"
+#include "stats/stats-aggregated.h"
 #include "logqueue.h"
 #include "mainloop-worker.h"
 #include "seqnum.h"
@@ -108,6 +109,9 @@ struct _LogThreadedDestDriver
   StatsCounterItem *dropped_messages;
   StatsCounterItem *processed_messages;
   StatsCounterItem *written_messages;
+  StatsAggregatedItem *max_message_size;
+  StatsAggregatedItem *average_messages_size;
+  StatsAggregatedItem *EPS;
 
   gint batch_lines;
   gint batch_timeout;

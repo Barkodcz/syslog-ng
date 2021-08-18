@@ -23,6 +23,8 @@
  */
 
 #include "stats/stats-cluster-logpipe.h"
+#include "stats/stats-cluster-single.h"
+#include "stats/stats-aggregated-register.h"
 #include "logthrdestdrv.h"
 #include "seqnum.h"
 #include "scratch-buffers.h"
@@ -999,6 +1001,33 @@ _init_stats_key(LogThreadedDestDriver *self, StatsClusterKey *sc_key)
 }
 
 static void
+_register_aggregated_stats(LogThreadedDestDriver *self)
+{
+  stats_aggregated_lock();
+
+  stats_register_aggregated_maximum(0, self->stats_source | SCS_DESTINATION, self->super.super.id,
+                                    self->format_stats_instance(self), &self->max_message_size);
+  stats_register_aggregated_average(0, self->stats_source | SCS_DESTINATION, self->super.super.id,
+                                    self->format_stats_instance(self), &self->average_messages_size);
+  stats_register_aggregated_eps(0, self->stats_source | SCS_DESTINATION, self->super.super.id,
+                                self->format_stats_instance(self), self->written_messages, &self->EPS);
+
+  stats_aggregated_unlock();
+}
+
+static void
+_unregister_aggregated_stats(LogThreadedDestDriver *self)
+{
+  stats_aggregated_lock();
+
+  stats_unregister_aggregated_maximum(self->max_message_size);
+  stats_unregister_aggregated_average(self->average_messages_size);
+  stats_unregister_aggregated_eps(self->EPS);
+
+  stats_aggregated_unlock();
+}
+
+static void
 _register_stats(LogThreadedDestDriver *self)
 {
   stats_lock();
@@ -1009,8 +1038,10 @@ _register_stats(LogThreadedDestDriver *self)
     stats_register_counter(0, &sc_key, SC_TYPE_DROPPED, &self->dropped_messages);
     stats_register_counter(0, &sc_key, SC_TYPE_PROCESSED, &self->processed_messages);
     stats_register_counter(0, &sc_key, SC_TYPE_WRITTEN, &self->written_messages);
+
   }
   stats_unlock();
+  _register_aggregated_stats(self);
 }
 
 static void
@@ -1024,8 +1055,10 @@ _unregister_stats(LogThreadedDestDriver *self)
     stats_unregister_counter(&sc_key, SC_TYPE_DROPPED, &self->dropped_messages);
     stats_unregister_counter(&sc_key, SC_TYPE_PROCESSED, &self->processed_messages);
     stats_unregister_counter(&sc_key, SC_TYPE_WRITTEN, &self->written_messages);
+
   }
   stats_unlock();
+  _unregister_aggregated_stats(self);
 }
 
 static gchar *

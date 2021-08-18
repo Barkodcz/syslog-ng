@@ -447,6 +447,8 @@ log_reader_handle_line(LogReader *self, const guchar *line, gint length, LogTran
   m = log_msg_new((gchar *) line, length,
                   &self->options->parse_options);
 
+  stats_aggregated_feed_input(self->super.max_message_size, length);
+  stats_aggregated_feed_input(self->super.average_messages_size, length);
   log_msg_set_saddr(m, aux->peer_addr ? : self->peer_addr);
   log_msg_set_daddr(m, aux->local_addr ? : self->local_addr);
   m->proto = aux->proto;

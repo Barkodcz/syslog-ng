@@ -26,6 +26,7 @@
 #include "messages.h"
 #include "host-resolve.h"
 #include "stats/stats-registry.h"
+#include "stats/stats-aggregated-register.h"
 #include "stats/stats-cluster-single.h"
 #include "msg-stats.h"
 #include "logmsg/tags.h"
@@ -459,6 +460,33 @@ _create_ack_tracker_if_not_exists(LogSource *self)
     }
 }
 
+static void
+_register_aggregated_stats(LogSource *self)
+{
+  stats_aggregated_lock();
+
+  stats_register_aggregated_maximum(self->options->stats_level, self->options->stats_source | SCS_SOURCE, self->stats_id,
+                                    self->stats_id, &self->max_message_size);
+  stats_register_aggregated_average(self->options->stats_level, self->options->stats_source | SCS_SOURCE, self->stats_id,
+                                    self->stats_id, &self->average_messages_size);
+  stats_register_aggregated_eps(self->options->stats_level, self->options->stats_source | SCS_SOURCE, self->stats_id,
+                                self->stats_id, self->recvd_messages, &self->EPS);
+
+  stats_aggregated_unlock();
+}
+
+static void
+_unregister_aggregated_stats(LogSource *self)
+{
+  stats_aggregated_lock();
+
+  stats_unregister_aggregated_maximum(self->max_message_size);
+  stats_unregister_aggregated_average(self->average_messages_size);
+  stats_unregister_aggregated_eps(self->EPS);
+
+  stats_aggregated_unlock();
+}
+
 gboolean
 log_source_init(LogPipe *s)
 {
@@ -481,6 +509,7 @@ log_source_init(LogPipe *s)
   _register_window_stats(self);
 
   stats_unlock();
+  _register_aggregated_stats(self);
 
   return TRUE;
 }
@@ -500,6 +529,7 @@ log_source_deinit(LogPipe *s)
   _unregister_window_stats(self);
 
   stats_unlock();
+  _unregister_aggregated_stats(self);
 
   return TRUE;
 }

@@ -29,6 +29,7 @@
 #include "stats/stats-registry.h"
 #include "window-size-counter.h"
 #include "dynamic-window.h"
+#include "stats/stats-aggregated.h"
 
 typedef struct _LogSourceOptions
 {
@@ -83,6 +84,9 @@ struct _LogSource
   StatsCounterItem *recvd_messages;
   StatsCluster *stat_window_size_cluster;
   StatsCluster *stat_full_window_cluster;
+  StatsAggregatedItem *max_message_size;
+  StatsAggregatedItem *average_messages_size;
+  StatsAggregatedItem *EPS;
 
   guint32 last_ack_count;
   guint32 ack_count;

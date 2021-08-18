@@ -25,7 +25,9 @@
 #include "logwriter.h"
 #include "messages.h"
 #include "stats/stats-registry.h"
+#include "stats/stats-aggregated-register.h"
 #include "stats/stats-cluster-single.h"
+#include "stats/stats-aggregated.h"
 #include "hostname.h"
 #include "host-resolve.h"
 #include "seqnum.h"
@@ -70,6 +72,9 @@ struct _LogWriter
   StatsCounterItem *suppressed_messages;
   StatsCounterItem *processed_messages;
   StatsCounterItem *written_messages;
+  StatsAggregatedItem *max_message_size;
+  StatsAggregatedItem *average_messages_size;
+  StatsAggregatedItem *EPS;
   struct
   {
     StatsCounterItem *count;
@@ -1168,6 +1173,9 @@ log_writer_write_message(LogWriter *self, LogMessage *msg, LogPathOptions *path_
                 evt_tag_printf("message", "%s", self->line_buffer->str));
     }
 
+
+  stats_aggregated_feed_input(self->max_message_size, self->line_buffer->len);
+  stats_aggregated_feed_input(self->average_messages_size, self->line_buffer->len);
   if (self->line_buffer->len)
     {
       LogProtoStatus status = log_proto_client_post(self->proto, msg, (guchar *)self->line_buffer->str,
@@ -1390,6 +1398,33 @@ log_writer_init_watches(LogWriter *self)
 }
 
 static void
+_register_aggregated_stats(LogWriter *self)
+{
+  stats_aggregated_lock();
+
+  stats_register_aggregated_maximum(self->options->stats_level, self->options->stats_source | SCS_DESTINATION,
+                                    self->stats_id, self->stats_instance, &self->max_message_size);
+  stats_register_aggregated_average(self->options->stats_level, self->options->stats_source | SCS_DESTINATION,
+                                    self->stats_id, self->stats_instance, &self->average_messages_size);
+  stats_register_aggregated_eps(self->options->stats_level, self->options->stats_source | SCS_DESTINATION, self->stats_id,
+                                self->stats_instance, self->written_messages, &self->EPS);
+
+  stats_aggregated_unlock();
+}
+
+static void
+_unregister_aggregated_stats(LogWriter *self)
+{
+  stats_aggregated_lock();
+
+  stats_unregister_aggregated_maximum(self->max_message_size);
+  stats_unregister_aggregated_average(self->average_messages_size);
+  stats_unregister_aggregated_eps(self->EPS);
+
+  stats_aggregated_unlock();
+}
+
+static void
 _register_counters(LogWriter *self)
 {
   stats_lock();
@@ -1419,6 +1454,7 @@ _register_counters(LogWriter *self)
 
   }
   stats_unlock();
+  _register_aggregated_stats(self);
 }
 
 static gboolean
@@ -1480,8 +1516,10 @@ _unregister_counters(LogWriter *self)
     stats_unregister_counter(&sc_key_truncated_bytes, SC_TYPE_SINGLE_VALUE, &self->truncated.bytes);
 
     log_queue_unregister_stats_counters(self->queue, &sc_key);
+
   }
   stats_unlock();
+  _unregister_aggregated_stats(self);
 
 }
 

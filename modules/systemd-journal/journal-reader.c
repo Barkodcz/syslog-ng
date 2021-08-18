@@ -265,6 +265,9 @@ _handle_message(JournalReader *self)
   gpointer args[] = {msg, self->options};
 
   journald_foreach_data(self->journal, _handle_data, args);
+  gsize msg_length = log_msg_get_size(msg);
+  stats_aggregated_feed_input(self->super.max_message_size, msg_length);
+  stats_aggregated_feed_input(self->super.average_messages_size, msg_length);
   _set_message_timestamp(self, msg);
   _set_program(self->options, msg);
 
