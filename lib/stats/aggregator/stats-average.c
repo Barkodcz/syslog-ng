@@ -64,7 +64,10 @@ _insert_data(StatsAggregator *s, gsize value)
 
   _inc_count(self);
   _add_sum(self, value);
-  stats_counter_set(self->output_counter, (_get_sum(self)/_get_count(self)));
+
+  gsize divisor = _get_count(self);
+  if (divisor > 0)
+    stats_counter_set(self->output_counter, (_get_sum(self)/divisor));
 }
 
 static void
