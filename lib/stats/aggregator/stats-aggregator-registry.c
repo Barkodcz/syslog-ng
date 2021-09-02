@@ -28,6 +28,7 @@
 #include "iv.h"
 #include "timeutils/cache.h"
 #include "mainloop.h"
+#include "messages.h"
 
 #define FREQUENCY_OF_UPDATE 60
 
@@ -66,6 +67,8 @@ static void
 _update(void *cookie)
 {
   g_hash_table_foreach(stats_cluster_container.clusters, _update_func, NULL);
+  
+  msg_error("[+] stats-aggregator update!");
 
   if(g_hash_table_size(stats_cluster_container.clusters) > 0
       && !iv_timer_registered(&stats_cluster_container.update_timer))
