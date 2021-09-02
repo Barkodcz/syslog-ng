@@ -82,6 +82,7 @@ _set_virtual_function(StatsAggregatorMaximum *self)
 StatsAggregator *
 stats_aggregator_maximum_new(gint level, StatsClusterKey *sc_key)
 {
+  level = 0;
   StatsAggregatorMaximum *self = g_new0(StatsAggregatorMaximum, 1);
   stats_aggregator_init_instance(&self->super, sc_key, level);
   _set_virtual_function(self);

@@ -1449,7 +1449,7 @@ _register_counters(LogWriter *self)
     stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_SUPPRESSED, &self->suppressed_messages);
   stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_DROPPED, &self->dropped_messages);
   stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_PROCESSED, &self->processed_messages);
-  stats_register_counter(self->options->stats_level, &sc_key, SC_TYPE_WRITTEN, &self->written_messages);
+  stats_register_counter(0, &sc_key, SC_TYPE_WRITTEN, &self->written_messages);
   log_queue_register_stats_counters(self->queue, self->options->stats_level, &sc_key);
 
   StatsClusterKey sc_key_truncated_count;

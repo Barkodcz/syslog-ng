@@ -120,6 +120,7 @@ _set_virtual_function(StatsAggregatorAverage *self )
 StatsAggregator *
 stats_aggregator_average_new(gint level, StatsClusterKey *sc_key)
 {
+  level = 0;
   StatsAggregatorAverage *self = g_new0(StatsAggregatorAverage, 1);
   stats_aggregator_init_instance(&self->super, sc_key, level);
   _set_virtual_function(self);

@@ -343,6 +343,7 @@ _set_virtual_function(StatsAggregatorCPS *self )
 StatsAggregator *
 stats_aggregator_cps_new(gint level, StatsClusterKey *sc_key, StatsClusterKey *sc_key_input, gint stats_type)
 {
+  level = 0;
   StatsAggregatorCPS *self = g_new0(StatsAggregatorCPS, 1);
   stats_aggregator_init_instance(&self->super, sc_key, level);
   _set_virtual_function(self);
