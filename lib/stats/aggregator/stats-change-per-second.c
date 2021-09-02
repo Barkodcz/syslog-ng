@@ -272,7 +272,7 @@ _calc_average(StatsAggregatorCPS *self, CPSLogic *logic, time_t *now)
            evt_tag_long("to_divide", to_divide),
            evt_tag_long("cps", (_get_sum(logic) / to_divide)),
            evt_tag_long("duration", logic->duration),
-           evt_tag_long("elapsed_time", elapsed_time)
+           evt_tag_long("elapsed_time", elapsed_time),
            evt_tag_printf("name: %s:%s:%s", self->super.key.id, self->super.key.instance, self->start.name));
 }
 
