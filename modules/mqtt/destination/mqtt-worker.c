@@ -30,7 +30,6 @@
 #include <stdio.h>
 
 #define PUBLISH_TIMEOUT    10000L
-#define DISCONNECT_TIMEOUT 10000
 
 static LogThreadedResult
 _publish_result_evaluation (LogThreadedDestWorker *self, gint result)
@@ -117,7 +116,7 @@ mqtt_dest_worker_resolve_template_topic_name(MQTTDestinationWorker *self, LogMes
 
   g_error_free(error);
 
-  return owner->fallback_topic_name;
+  return owner->option.fallback_topic_name;
 }
 
 static LogThreadedResult
@@ -133,7 +132,7 @@ _mqtt_send(LogThreadedDestWorker *s, gchar *msg, const gchar *topic)
 
   pubmsg.payload = msg;
   pubmsg.payloadlen = (int)strlen(msg);
-  pubmsg.qos = owner->qos;
+  pubmsg.qos = owner->option.qos;
   pubmsg.retained = 0;
 
   rc = MQTTClient_publishMessage(self->client, topic, &pubmsg, &token);
@@ -193,61 +192,13 @@ _log_ssl_errors(const gchar *str, gsize len, gpointer u)
   return TRUE;
 }
 
-static MQTTClient_SSLOptions
-_create_ssl_options(MQTTDestinationWorker *self)
-{
-  MQTTDestinationDriver *owner = (MQTTDestinationDriver *) self->super.owner;
-
-  MQTTClient_SSLOptions ssl_opts = MQTTClient_SSLOptions_initializer;
-  ssl_opts.trustStore = owner->ca_file;
-  ssl_opts.CApath = owner->ca_dir;
-  ssl_opts.keyStore = owner->cert_file;
-  ssl_opts.privateKey = owner->key_file;
-  ssl_opts.enabledCipherSuites = owner->ciphers;
-  ssl_opts.sslVersion = owner->ssl_version;
-  ssl_opts.enableServerCertAuth = owner->peer_verify;
-  ssl_opts.verify = owner->peer_verify;
-  ssl_opts.disableDefaultTrustStore = !owner->use_system_cert_store;
-  ssl_opts.ssl_error_cb = _log_ssl_errors;
-  ssl_opts.ssl_error_context = self;
-
-  return ssl_opts;
-}
-
 static gboolean
 _connect(LogThreadedDestWorker *s)
 {
   MQTTDestinationWorker *self = (MQTTDestinationWorker *)s;
   MQTTDestinationDriver *owner = (MQTTDestinationDriver *) s->owner;
-  gint rc;
 
-  MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
-  conn_opts.keepAliveInterval = owner->keepalive;
-  conn_opts.cleansession = FALSE;
-  conn_opts.username = owner->username;
-  conn_opts.password = owner->password;
-
-#if SYSLOG_NG_HAVE_PAHO_HTTP_PROXY
-  if (owner->http_proxy)
-    {
-      conn_opts.httpProxy = owner->http_proxy;
-      conn_opts.httpsProxy = owner->http_proxy;
-    }
-#endif
-
-  MQTTClient_SSLOptions ssl_opts = _create_ssl_options(self);
-  conn_opts.ssl = &ssl_opts;
-
-  if ((rc = MQTTClient_connect(self->client, &conn_opts)) != MQTTCLIENT_SUCCESS)
-    {
-      msg_error("Error connecting mqtt client",
-                evt_tag_str("error code", MQTTClient_strerror(rc)),
-                evt_tag_str("driver", self->super.owner->super.super.id),
-                log_pipe_location_tag(&self->super.owner->super.super.super));
-      return FALSE;
-    }
-
-  return TRUE;
+  return mqtt_connect(&self->client, &owner->option, self, &owner->super.super.super, _log_ssl_errors);
 }
 
 static void
@@ -264,19 +215,8 @@ _thread_init(LogThreadedDestWorker *s)
   MQTTDestinationWorker *self = (MQTTDestinationWorker *)s;
   MQTTDestinationDriver *owner = (MQTTDestinationDriver *) s->owner;
 
-  gint rc;
-
-  if ((rc = MQTTClient_create(&self->client, owner->address->str,
-                              log_pipe_get_persist_name(&owner->super.super.super.super),
-                              MQTTCLIENT_PERSISTENCE_NONE, NULL)) != MQTTCLIENT_SUCCESS)
-    {
-      msg_error("Error creating mqtt client",
-                evt_tag_str("address", owner->address->str),
-                evt_tag_str("error code", MQTTClient_strerror(rc)),
-                evt_tag_str("driver", self->super.owner->super.super.id),
-                log_pipe_location_tag(&self->super.owner->super.super.super));
-      return FALSE;
-    }
+  if (!mqtt_create(&self->client, owner->option.address, &owner->super.super.super))
+    return FALSE;
 
   return log_threaded_dest_worker_init_method(s);
 }
@@ -286,7 +226,7 @@ _thread_deinit(LogThreadedDestWorker *s)
 {
   MQTTDestinationWorker *self = (MQTTDestinationWorker *)s;
 
-  MQTTClient_destroy(&self->client);
+  mqtt_destroy(&self->client);
 
   log_threaded_dest_worker_deinit_method(s);
 }
