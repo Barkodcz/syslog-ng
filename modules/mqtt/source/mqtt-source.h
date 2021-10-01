@@ -20,43 +20,25 @@
  *
  */
 
+#ifndef MQTT_SOURCE_H_INCLUDE
+#define MQTT_SOURCE_H_INCLUDE
 
-#ifndef MQTT_DESTINATION_H_INCLUDED
-#define MQTT_DESTINATION_H_INCLUDED
-
-#include "driver.h"
-#include "logthrdest/logthrdestdrv.h"
 #include "mqtt-options.h"
+#include "logthrsource/logthrfetcherdrv.h"
+#include "atomic.h"
+#include <MQTTClient.h>
 
-typedef struct
+typedef struct _MQTTSourceDriver MQTTSourceDriver;
+
+struct _MQTTSourceDriver
 {
-  LogThreadedDestDriver super;
-
-  LogTemplate *message;
-  LogTemplateOptions template_options;
-  LogTemplate *topic_name;
-
+  LogThreadedFetcherDriver super;
   MQTTOptions option;
-} MQTTDestinationDriver;
-
-#define TOPIC_NAME_ERROR mqtt_topic_name_error_quark()
-
-GQuark mqtt_topic_name_error_quark(void);
-
-enum MQTTTopicError
-{
-  TOPIC_LENGTH_ZERO,
+  MQTTClient client;
 };
 
-LogDriver *mqtt_dd_new(GlobalConfig *cfg);
 
-void mqtt_dd_set_topic_template(LogDriver *d, LogTemplate *topic);
-void mqtt_dd_set_message_template_ref(LogDriver *d, LogTemplate *message);
+LogDriver *mqtt_sd_new(GlobalConfig *cfg);
+MQTTOptions *mqtt_sd_get_options(LogDriver *s);
 
-
-gboolean mqtt_dd_validate_topic_name(const gchar *name, GError **error);
-
-LogTemplateOptions *mqtt_dd_get_template_options(LogDriver *s);
-MQTTOptions *mqtt_dd_get_options(LogDriver *s);
-
-#endif /* MQTT_DESTINATION_H_INCLUDED */
+#endif /* MQTT_SOURCE_H_INCLUDE */
