@@ -50,6 +50,7 @@ MQTTOptions *last_option;
 
 %token KW_MQTT
 %token KW_TOPIC
+%token KW_TOPICS
 %token KW_FALLBACK_TOPIC
 %token KW_KEEPALIVE
 %token KW_ADDRESS
@@ -107,7 +108,11 @@ mqtt_source_options
 mqtt_source_option
         : threaded_source_driver_option
         | mqtt_option
-        | KW_TOPIC '(' string ')' { mqtt_option_set_fallback_topic(last_option, $3); free($3); }
+        | KW_TOPIC '(' string_list ')'
+          {
+            mqtt_sd_set_topics(last_driver, $3);
+            g_list_free_full($3, free);
+          }
         ;
 
 mqtt_option

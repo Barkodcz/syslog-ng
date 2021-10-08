@@ -24,42 +24,60 @@
 #include "cfg-parser.h"
 #include "mqtt-grammar.h"
 
+#define MQTT_PARSER_COMMON_KEYWORD  { "mqtt", KW_MQTT }, \
+                                    { "address", KW_ADDRESS }, \
+                                    { "topic", KW_TOPIC }, \
+                                    { "keepalive", KW_KEEPALIVE }, \
+                                    { "qos", KW_QOS }, \
+                                    { "client_id", KW_CLIENT_ID }, \
+                                    { "username", KW_USERNAME }, \
+                                    { "password", KW_PASSWORD }, \
+                                    { "http_proxy", KW_HTTP_PROXY }, \
+                                    { "tls", KW_TLS }, \
+                                    { "ca_dir", KW_CA_DIR }, \
+                                    { "ca_file", KW_CA_FILE }, \
+                                    { "cert_file", KW_CERT_FILE }, \
+                                    { "key_file", KW_KEY_FILE }, \
+                                    { "cipher_suite", KW_CIPHER_SUITE }, \
+                                    { "peer_verify", KW_PEER_VERIFY }, \
+                                    { "use_system_cert_store", KW_USE_SYSTEM_CERT_STORE }, \
+                                    { "ssl_version", KW_SSL_VERSION },
 
 extern int mqtt_debug;
 
 int mqtt_parse(CfgLexer *lexer, LogDriver **instance, gpointer arg);
 
-static CfgLexerKeyword mqtt_keywords[] =
+static CfgLexerKeyword mqtt_keywords_destination[] =
 {
-  { "mqtt", KW_MQTT },
-  { "address", KW_ADDRESS },
-  { "topic", KW_TOPIC },
+  MQTT_PARSER_COMMON_KEYWORD
   { "fallback_topic", KW_FALLBACK_TOPIC },
-  { "keepalive", KW_KEEPALIVE },
-  { "qos", KW_QOS },
-  { "client_id", KW_CLIENT_ID },
-  { "username", KW_USERNAME },
-  { "password", KW_PASSWORD },
-  { "http_proxy", KW_HTTP_PROXY },
-  { "tls", KW_TLS },
-  { "ca_dir", KW_CA_DIR },
-  { "ca_file", KW_CA_FILE },
-  { "cert_file", KW_CERT_FILE },
-  { "key_file", KW_KEY_FILE },
-  { "cipher_suite", KW_CIPHER_SUITE },
-  { "peer_verify", KW_PEER_VERIFY },
-  { "use_system_cert_store", KW_USE_SYSTEM_CERT_STORE },
-  { "ssl_version", KW_SSL_VERSION },
   { NULL }
 };
 
-CfgParser mqtt_parser =
+CfgParser mqtt_parser_destination =
 {
 #if SYSLOG_NG_ENABLE_DEBUG
   .debug_flag = &mqtt_debug,
 #endif
   .name = "mqtt",
-  .keywords = mqtt_keywords,
+  .keywords = mqtt_keywords_destination,
+  .parse = (gint (*)(CfgLexer *, gpointer *, gpointer)) mqtt_parse,
+  .cleanup = (void (*)(gpointer)) log_pipe_unref,
+};
+
+static CfgLexerKeyword mqtt_keywords_source[] =
+{
+  MQTT_PARSER_COMMON_KEYWORD
+  { NULL }
+};
+
+CfgParser mqtt_parser_source =
+{
+#if SYSLOG_NG_ENABLE_DEBUG
+  .debug_flag = &mqtt_debug,
+#endif
+  .name = "mqtt",
+  .keywords = mqtt_keywords_source,
   .parse = (gint (*)(CfgLexer *, gpointer *, gpointer)) mqtt_parse,
   .cleanup = (void (*)(gpointer)) log_pipe_unref,
 };

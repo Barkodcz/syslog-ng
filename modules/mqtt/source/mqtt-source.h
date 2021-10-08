@@ -35,10 +35,14 @@ struct _MQTTSourceDriver
   LogThreadedFetcherDriver super;
   MQTTOptions option;
   MQTTClient client;
+  gchar **topics;
+  guint topics_len;
+  gchar *topic_in_one;
 };
 
 
 LogDriver *mqtt_sd_new(GlobalConfig *cfg);
 MQTTOptions *mqtt_sd_get_options(LogDriver *s);
+void mqtt_sd_set_topics(LogDriver *s, GList *list);
 
 #endif /* MQTT_SOURCE_H_INCLUDE */

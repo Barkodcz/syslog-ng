@@ -52,6 +52,12 @@ typedef struct
 
 } MQTTOptions;
 
+typedef struct
+{
+  gchar *topic;
+  gint qos;
+} TopicType;
+
 void mqtt_option_set_default_value(MQTTOptions *self);
 void mqtt_option_free(MQTTOptions *self);
 

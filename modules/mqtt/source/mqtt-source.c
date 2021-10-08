@@ -36,7 +36,7 @@ _format_persist_name(const LogPipe *s)
     g_snprintf(stats_instance, sizeof(stats_instance), "%s", ((LogPipe *)s)->persist_name);
   else
     g_snprintf(stats_instance, sizeof(stats_instance), "mqtt,source,%s,%s", self->option.address,
-               self->option.fallback_topic_name);
+               self->topic_in_one);
 
   return stats_instance;
 }
@@ -52,7 +52,7 @@ _format_stats_instance(LogThreadedSourceDriver *s)
     g_snprintf(persist_name, sizeof(persist_name), "mqtt-source.%s", p->persist_name);
   else
     g_snprintf(persist_name, sizeof(persist_name), "mqtt-source.(%s,%s)", self->option.address,
-               self->option.fallback_topic_name);
+               self->topic_in_one);
 
   return persist_name;
 }
@@ -78,26 +78,30 @@ _log_ssl_errors(const gchar *str, gsize len, gpointer u)
   MQTTSourceDriver *self = (MQTTSourceDriver *) u;
 
   msg_error("MQTT TLS error", evt_tag_printf("line", "%.*s", (gint) len, str),
-            log_pipe_location_tag(&self->super.super.super.super.super));
+            evt_tag_str("client_id", self->option.client_id));
   return TRUE;
 }
 
 static gboolean
 _subscribe_topic(MQTTSourceDriver *self)
 {
+  gint *qoss = g_new0(gint, self->topics_len);
+  for(int i = 0; i < self->topics_len; ++i)
+    qoss[i] = self->option.qos;
+
   gint rc;
-  if ((rc = MQTTClient_subscribe(self->client, self->option.fallback_topic_name, self->option.qos)) != MQTTCLIENT_SUCCESS)
+  gboolean result = TRUE;
+  if ((rc = MQTTClient_subscribeMany(self->client, self->topics_len, self->topics, qoss)) != MQTTCLIENT_SUCCESS)
     {
       msg_error("Error while setting callbacks",
-                evt_tag_str("topic", self->option.fallback_topic_name),
-                evt_tag_int("qos", self->option.qos),
+                evt_tag_str("topics", self->topic_in_one),
                 evt_tag_str("error code", MQTTClient_strerror(rc)),
-                evt_tag_str("driver", self->super.super.super.super.id),
-                log_pipe_location_tag(&self->super.super.super.super.super));
-      return FALSE;
+                evt_tag_str("client_id", self->option.client_id));
+      result = FALSE;
     }
 
-  return TRUE;
+  g_free(qoss);
+  return result;
 }
 
 static void
@@ -130,10 +134,10 @@ _connect(LogThreadedFetcherDriver *s)
 }
 
 static gboolean
-_unscribe_topic(MQTTSourceDriver *self)
+_unsubscribe_topic(MQTTSourceDriver *self)
 {
   gint rc;
-  if ((rc = MQTTClient_unsubscribe(self->client, self->option.fallback_topic_name)) != MQTTCLIENT_SUCCESS)
+  if ((rc = MQTTClient_unsubscribeMany(self->client, self->topics_len, self->topics)) != MQTTCLIENT_SUCCESS)
     {
       return FALSE;
     }
@@ -146,7 +150,7 @@ _disconnect(LogThreadedFetcherDriver *s)
 {
   MQTTSourceDriver *self = (MQTTSourceDriver *)s;
 
-  _unscribe_topic(self);
+  _unsubscribe_topic(self);
 
   MQTTClient_disconnect(self->client, DISCONNECT_TIMEOUT);
 }
@@ -202,10 +206,24 @@ _deinit(LogPipe *s)
 }
 
 static void
+_free_up_topics(MQTTSourceDriver *self)
+{
+  if (self->topics == NULL)
+    return;
+
+  for (int i = 0; i < self->topics_len; ++i)
+    g_free(self->topics[i]);
+
+  g_free(self->topics);
+  g_free(self->topic_in_one);
+}
+
+static void
 _free(LogPipe *s)
 {
   MQTTSourceDriver *self = (MQTTSourceDriver *)s;
   mqtt_option_free(&self->option);
+  _free_up_topics(self);
 
   log_threaded_fetcher_driver_free_method(s);
 }
@@ -240,4 +258,26 @@ mqtt_sd_get_options(LogDriver *s)
   MQTTSourceDriver *self = (MQTTSourceDriver *)s;
 
   return &self->option;
+}
+
+void
+mqtt_sd_set_topics(LogDriver *s, GList *list)
+{
+  MQTTSourceDriver *self = (MQTTSourceDriver *)s;
+
+  _free_up_topics(self);
+
+  self->topics_len = g_list_length(list);
+  self->topics = g_new0(gchar *, self->topics_len);
+  int i = 0;
+  GString *str = g_string_new("");
+
+  for (GList *it = list; it != NULL; it = it->next)
+    {
+      self->topics[i++] = g_strdup(it->data);
+      str = g_string_append(str, it->data);
+    }
+
+  self->topic_in_one = g_strdup(str->str);
+  g_string_free(str, TRUE);
 }
