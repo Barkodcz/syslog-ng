@@ -35,6 +35,7 @@ typedef struct
   gint keepalive;
   gchar *address;
   gint qos;
+  gchar *client_id;
 
   gchar *username;
   gchar *password;
@@ -58,6 +59,7 @@ void mqtt_option_set_fallback_topic(MQTTOptions *o, const gchar *fallback_topic)
 void mqtt_option_set_keepalive (MQTTOptions *o, const gint keepalive);
 void mqtt_option_set_address(MQTTOptions *o, const gchar *address);
 void mqtt_option_set_qos (MQTTOptions *o, const gint qos);
+void mqtt_option_set_client_id(MQTTOptions *o, const gchar *client_id);
 
 void mqtt_option_set_username(MQTTOptions *o, const gchar *username);
 void mqtt_option_set_password(MQTTOptions *o, const gchar *password);
@@ -74,9 +76,9 @@ void mqtt_option_use_system_cert_store(MQTTOptions *o, gboolean use_system_cert_
 
 gboolean mqtt_option_validate_address(const gchar *address);
 
-gboolean mqtt_create(MQTTClient *client, gchar *address, LogDriver *driver);
+gboolean mqtt_create(MQTTClient *client, gchar *address, gchar *client_id);
 void mqtt_destroy(MQTTClient *client);
-gboolean mqtt_connect(MQTTClient *client, MQTTOptions *option, gpointer context, LogDriver *driver,
+gboolean mqtt_connect(MQTTClient *client, MQTTOptions *option, gpointer context,
                       gint(*log_error)(const gchar *str, gsize len, gpointer u));
 
 #endif /* MQTT_OPTIONS */

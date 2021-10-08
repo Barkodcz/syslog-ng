@@ -47,6 +47,7 @@ void
 mqtt_option_free(MQTTOptions *self)
 {
   g_free(self->address);
+  g_free(self->client_id);
 
   g_free(self->username);
   g_free(self->password);
@@ -87,6 +88,12 @@ mqtt_option_set_qos (MQTTOptions *self, const gint qos)
   self->qos = qos;
 }
 
+void
+mqtt_option_set_client_id(MQTTOptions *self, const gchar *client_id)
+{
+  g_free(self->client_id);
+  self->client_id = g_strdup(client_id);
+}
 
 void
 mqtt_option_set_username(MQTTOptions *self, const gchar *username)
@@ -222,7 +229,7 @@ _create_ssl_options(MQTTOptions *option, gpointer context, gint(*log_error)(cons
 }
 
 gboolean
-mqtt_connect(MQTTClient *client, MQTTOptions *option, gpointer context, LogDriver *driver,
+mqtt_connect(MQTTClient *client, MQTTOptions *option, gpointer context,
              gint(*log_error)(const gchar *str, gsize len, gpointer u))
 {
   gint rc;
@@ -248,8 +255,7 @@ mqtt_connect(MQTTClient *client, MQTTOptions *option, gpointer context, LogDrive
     {
       msg_error("Error connecting mqtt client",
                 evt_tag_str("error code", MQTTClient_strerror(rc)),
-                evt_tag_str("driver", driver->id),
-                log_pipe_location_tag(&driver->super));
+                evt_tag_str("client_id", option->client_id));
       return FALSE;
     }
 
@@ -257,19 +263,18 @@ mqtt_connect(MQTTClient *client, MQTTOptions *option, gpointer context, LogDrive
 }
 
 gboolean
-mqtt_create(MQTTClient *client, gchar *address, LogDriver *driver)
+mqtt_create(MQTTClient *client, gchar *address, gchar *client_id)
 {
   gint rc;
 
   if ((rc = MQTTClient_create(client, address,
-                              log_pipe_get_persist_name(&driver->super),
+                              client_id,
                               MQTTCLIENT_PERSISTENCE_NONE, NULL)) != MQTTCLIENT_SUCCESS)
     {
       msg_error("Error creating mqtt client",
                 evt_tag_str("address", address),
                 evt_tag_str("error code", MQTTClient_strerror(rc)),
-                evt_tag_str("driver", driver->id),
-                log_pipe_location_tag(&driver->super));
+                evt_tag_str("client_id", client_id));
       return FALSE;
     }
   return TRUE;

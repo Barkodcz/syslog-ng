@@ -198,7 +198,7 @@ _connect(LogThreadedDestWorker *s)
   MQTTDestinationWorker *self = (MQTTDestinationWorker *)s;
   MQTTDestinationDriver *owner = (MQTTDestinationDriver *) s->owner;
 
-  return mqtt_connect(&self->client, &owner->option, self, &owner->super.super.super, _log_ssl_errors);
+  return mqtt_connect(&self->client, &owner->option, self, _log_ssl_errors);
 }
 
 static void
@@ -215,7 +215,7 @@ _thread_init(LogThreadedDestWorker *s)
   MQTTDestinationWorker *self = (MQTTDestinationWorker *)s;
   MQTTDestinationDriver *owner = (MQTTDestinationDriver *) s->owner;
 
-  if (!mqtt_create(&self->client, owner->option.address, &owner->super.super.super))
+  if (!mqtt_create(&self->client, owner->option.address, owner->option.client_id))
     return FALSE;
 
   return log_threaded_dest_worker_init_method(s);

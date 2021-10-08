@@ -175,6 +175,9 @@ _init(LogPipe *d)
       return FALSE;
     }
 
+  if (self->option.client_id == NULL)
+    mqtt_option_set_client_id(&self->option, _format_persist_name(d));
+
   return TRUE;
 }
 

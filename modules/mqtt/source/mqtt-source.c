@@ -69,7 +69,7 @@ _create_message(MQTTSourceDriver *self, const gchar *message, gint length)
 static gboolean
 _client_init(MQTTSourceDriver *self)
 {
-  return mqtt_create(&self->client, self->option.address, &self->super.super.super.super);
+  return mqtt_create(&self->client, self->option.address, self->option.client_id);
 }
 
 static gint
@@ -120,7 +120,7 @@ _connect(LogThreadedFetcherDriver *s)
 {
   MQTTSourceDriver *self = (MQTTSourceDriver *)s;
 
-  if (!mqtt_connect(&self->client, &self->option, self, &self->super.super.super.super, _log_ssl_errors))
+  if (!mqtt_connect(&self->client, &self->option, self, _log_ssl_errors))
     return FALSE;
 
   if (!_subscribe_topic(self))
@@ -184,8 +184,13 @@ _fetch(LogThreadedFetcherDriver *s)
 static gboolean
 _init(LogPipe *s)
 {
+  MQTTSourceDriver *self = (MQTTSourceDriver *)s;
+
   if(!log_threaded_fetcher_driver_init_method(s))
     return FALSE;
+
+  if (self->option.client_id == NULL)
+    mqtt_option_set_client_id(&self->option, _format_persist_name(s));
 
   return TRUE;
 }
