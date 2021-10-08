@@ -76,6 +76,7 @@ void
 mqtt_client_options_destroy(MQTTClientOptions *self)
 {
   g_free(self->address);
+  g_free(self->client_id);
 
   g_free(self->username);
   g_free(self->password);
@@ -111,6 +112,12 @@ mqtt_client_options_set_qos (MQTTClientOptions *self, const gint qos)
   self->qos = qos;
 }
 
+void
+mqtt_client_options_set_client_id(MQTTClientOptions *self, const gchar *client_id)
+{
+  g_free(self->client_id);
+  self->client_id = g_strdup(client_id);
+}
 
 void
 mqtt_client_options_set_username(MQTTClientOptions *self, const gchar *username)
@@ -223,6 +230,12 @@ mqtt_client_options_get_qos(MQTTClientOptions *self)
   return self->qos;
 }
 
+gchar *
+mqtt_client_options_get_client_id(MQTTClientOptions *self)
+{
+  return self->client_id;
+}
+
 static MQTTClient_SSLOptions
 _create_ssl_options(MQTTClientOptions *option)
 {
@@ -277,6 +290,17 @@ mqtt_client_options_checker(MQTTClientOptions *self)
       self->http_proxy = NULL;
     }
 #endif
+
+  if (self->client_id == NULL)
+    {
+      LogDriver *d = (LogDriver *)self->context;
+
+      msg_error("client_id() should set!",
+                evt_tag_str("address", self->address),
+                evt_tag_str("driver", d->id),
+                log_pipe_location_tag(&d->super));
+      return FALSE;
+    }
 
   return TRUE;
 }

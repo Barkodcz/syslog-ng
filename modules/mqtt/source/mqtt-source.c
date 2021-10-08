@@ -80,13 +80,13 @@ _client_init(MQTTSourceDriver *self)
   gint rc;
 
   if ((rc = MQTTClient_create(&self->client, mqtt_client_options_get_address(&self->option),
-                              log_pipe_get_persist_name(&driver->super),
+                              mqtt_client_options_get_client_id(&self->option),
                               MQTTCLIENT_PERSISTENCE_NONE, NULL)) != MQTTCLIENT_SUCCESS)
     {
       msg_error("Error creating mqtt client",
                 evt_tag_str("address", mqtt_client_options_get_address(&self->option)),
                 evt_tag_str("error code", MQTTClient_strerror(rc)),
-                evt_tag_str("driver", self->super.super.super.super.id),
+                evt_tag_str("client_id", mqtt_client_options_get_client_id(&self->option)),
                 log_pipe_location_tag(&self->super.super.super.super.super));
       return FALSE;
     }
@@ -151,7 +151,7 @@ _connect(LogThreadedFetcherDriver *s)
     {
       msg_error("Error connecting mqtt client",
                 evt_tag_str("error code", MQTTClient_strerror(rc)),
-                evt_tag_str("driver", self->super.super.super.super.id),
+                evt_tag_str("client_id", mqtt_client_options_get_client_id(&self->option)),
                 log_pipe_location_tag(&self->super.super.super.super.super));
       return FALSE;
     }
@@ -224,6 +224,9 @@ _init(LogPipe *s)
 
   if(!log_threaded_fetcher_driver_init_method(s))
     return FALSE;
+
+  if (mqtt_client_options_get_client_id(&self->option) == NULL)
+    mqtt_client_options_set_client_id(&self->option, _format_persist_name(s));
 
   return TRUE;
 }

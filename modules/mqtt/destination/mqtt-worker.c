@@ -207,7 +207,7 @@ _connect(LogThreadedDestWorker *s)
     {
       msg_error("Error connecting mqtt client",
                 evt_tag_str("error code", MQTTClient_strerror(rc)),
-                evt_tag_str("driver", owner->super.super.super.id),
+                evt_tag_str("client_id", mqtt_client_options_get_client_id(&owner->option)),
                 log_pipe_location_tag(&owner->super.super.super.super));
       return FALSE;
     }
@@ -232,13 +232,13 @@ _thread_init(LogThreadedDestWorker *s)
   gint rc;
 
   if ((rc = MQTTClient_create(&self->client, mqtt_client_options_get_address(&owner->option),
-                              log_pipe_get_persist_name(&driver->super),
+                              mqtt_client_options_get_client_id(&owner->option),
                               MQTTCLIENT_PERSISTENCE_NONE, NULL)) != MQTTCLIENT_SUCCESS)
     {
       msg_error("Error creating mqtt client",
                 evt_tag_str("address", mqtt_client_options_get_address(&owner->option)),
                 evt_tag_str("error code", MQTTClient_strerror(rc)),
-                evt_tag_str("driver", owner->super.super.super.id),
+                evt_tag_str("client_id", mqtt_client_options_get_client_id(&owner->option)),
                 log_pipe_location_tag(&owner->super.super.super.super));
       return FALSE;
     }
