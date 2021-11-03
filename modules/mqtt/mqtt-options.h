@@ -78,10 +78,6 @@ void mqtt_client_options_set_context(MQTTClientOptions *o, gpointer context);
 void mqtt_client_options_set_log_error_fn(MQTTClientOptions *o, gint(*log_error)(const gchar *str, gsize len,
                                           gpointer u));
 
-
-void mqtt_client_options_set_context(MQTTClientOptions *o, gpointer context);
-void mqtt_client_options_set_log_error_fn(MQTTClientOptions *o, gint(*log_error)(const gchar *str, gsize len,
-                                          gpointer u));
 gchar *mqtt_client_options_get_address(MQTTClientOptions *self);
 gint mqtt_client_options_get_qos(MQTTClientOptions *self);
 gchar *mqtt_client_options_get_client_id(MQTTClientOptions *self);
