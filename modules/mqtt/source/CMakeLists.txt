@@ -4,7 +4,7 @@ set(MQTT_SOURCE_SOURCES
     mqtt-source.h
 )
 
-include_directories(${MQTT_DIR})
+target_include_directories(${MQTT_DIR})
 
 add_module(
   TARGET mqtt-source
