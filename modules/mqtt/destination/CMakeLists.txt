@@ -1,5 +1,4 @@
 
-target_include_directories(mqtt-destination PUBLIC ${MQTT_DIR})
 
 set(MQTT_DEST_SOURCES
     mqtt-destination.c
@@ -14,3 +13,5 @@ add_module(
   SOURCES ${MQTT_DEST_SOURCES}
   LIBRARY_TYPE STATIC # STATIC: Built as part of a larger libmqtt module
 )
+
+target_include_directories(mqtt-destination PUBLIC ${MQTT_DIR})
