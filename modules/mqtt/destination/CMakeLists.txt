@@ -6,7 +6,7 @@ set(MQTT_DEST_SOURCES
     mqtt-worker.h
 )
 
-target_include_directories(${MQTT_DIR})
+target_include_directories(mqtt-destination PUBLIC ${MQTT_DIR})
 
 add_module(
   TARGET mqtt-destination
