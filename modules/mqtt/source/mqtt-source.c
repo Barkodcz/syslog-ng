@@ -69,7 +69,7 @@ static LogMessage *
 _create_message(MQTTSourceDriver *self, const gchar *message, gint length)
 {
   LogMessage *msg = log_msg_new_empty();
-  log_msg_set_value_by_name(msg, "MSG", message, length);
+  log_msg_set_value(msg, LM_V_MESSAGE, message, length);
 
   return msg;
 }
