@@ -1,10 +1,10 @@
 
+target_include_directories(mqtt-source PUBLIC ${MQTT_DIR})
+
 set(MQTT_SOURCE_SOURCES
     mqtt-source.c
     mqtt-source.h
 )
-
-target_include_directories(mqtt-source PUBLIC ${MQTT_DIR})
 
 add_module(
   TARGET mqtt-source
