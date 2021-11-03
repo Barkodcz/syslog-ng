@@ -1,14 +1,17 @@
-created MQTT source driver
+MQTT source
 
-can be create mqtt source, recive message from specific topic
-MQTT source also supporting tls
+The new `mqtt()` source can be used to receive messages using the MQTT protocol.
+Supported transports: `tcp`, `ws`, `ssl`, `wss`
+TLS is supported!
 
-Example:
+Example config:
 ```
 source {
     mqtt{
         topic("sub1"), 
-        address("tcp://localhost:4445"), 
+        address("tcp://localhost:4445")
     };
 };
 ```
+
+The detailed description of options is in the pull request description.
