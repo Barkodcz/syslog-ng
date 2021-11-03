@@ -196,6 +196,8 @@ _free(LogPipe *d)
   log_template_options_destroy(&self->template_options);
   log_template_unref(self->message);
 
+  g_free(self->fallback_topic);
+
   log_threaded_dest_driver_free(d);
 }
 
