@@ -440,7 +440,10 @@ _is_record_length_valid(QDisk *self, gssize bytes_read, guint32 record_length)
       msg_error("Error reading disk-queue file, cannot read record-length",
                 evt_tag_str("error", bytes_read < 0 ? g_strerror(errno) : "short read"),
                 evt_tag_str("filename", self->filename),
-                evt_tag_long("offset", self->hdr->read_head));
+                evt_tag_long("read_head", self->hdr->read_head),
+                evt_tag_long("write_head", self->hdr->write_head),
+                evt_tag_long("length", self->hdr->length),
+                evt_tag_long("bytes_read", bytes_read));
       return FALSE;
     }
 
