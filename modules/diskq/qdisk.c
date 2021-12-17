@@ -105,13 +105,13 @@ pwrite_strict(gint fd, const void *buf, size_t count, off_t offset)
 
 
 static inline gboolean
-_is_position_after_disk_buf_size(QDisk *self, gint64 position)
+_is_position_at_least_disk_buf_size(QDisk *self, gint64 position)
 {
-  return position > self->options->disk_buf_size;
+  return position >= self->options->disk_buf_size;
 }
 
 static inline guint64
-_correct_position_if_after_disk_buf_size(QDisk *self, gint64 *position)
+_correct_position_if_at_least_disk_buf_size(QDisk *self, gint64 *position)
 {
   if (G_UNLIKELY(self->hdr->use_v1_wrap_condition))
     {
@@ -124,7 +124,7 @@ _correct_position_if_after_disk_buf_size(QDisk *self, gint64 *position)
       return *position;
     }
 
-  if (_is_position_after_disk_buf_size(self, *position))
+  if (_is_position_at_least_disk_buf_size(self, *position))
     {
       *position = QDISK_RESERVED_SPACE;
     }
@@ -170,7 +170,7 @@ qdisk_started(QDisk *self)
 static inline gboolean
 _is_qdisk_overwritten(QDisk *self)
 {
-  return _is_position_after_disk_buf_size(self, self->hdr->write_head);
+  return _is_position_at_least_disk_buf_size(self, self->hdr->write_head);
 }
 
 static inline gboolean
@@ -502,8 +502,8 @@ _calculate_new_read_head_position(QDisk *self, guint32 record_length)
 {
   gint64 new_read_head_position = self->hdr->read_head + record_length + sizeof(record_length);
 
-  if (new_read_head_position > self->hdr->write_head)
-    new_read_head_position = _correct_position_if_after_disk_buf_size(self, &new_read_head_position);
+  if (new_read_head_position >= self->hdr->write_head)
+    new_read_head_position = _correct_position_if_at_least_disk_buf_size(self, &new_read_head_position);
 
   return new_read_head_position;
 }
@@ -1235,7 +1235,7 @@ qdisk_skip_record(QDisk *self, guint64 position)
   new_position += record_length + sizeof(record_length);
   if (new_position > self->hdr->write_head)
     {
-      new_position = _correct_position_if_after_disk_buf_size(self, (gint64 *)&new_position);
+      new_position = _correct_position_if_at_least_disk_buf_size(self, (gint64 *)&new_position);
     }
   return new_position;
 }
