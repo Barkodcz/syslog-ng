@@ -186,7 +186,7 @@ _is_write_head_less_than_max_size(QDisk *self)
 }
 
 static inline gboolean
-_is_able_to_reset_write_head_to_beginning_of_qdisk(QDisk *self)
+_is_able_to_reset_head_to_beginning_of_qdisk(QDisk *self)
 {
   return self->hdr->backlog_head != QDISK_RESERVED_SPACE;
 }
@@ -216,7 +216,7 @@ qdisk_is_space_avail(QDisk *self, gint at_least)
    */
   return (
            (_is_backlog_head_prevent_write_head(self)) &&
-           (_is_write_head_less_than_max_size(self) || _is_able_to_reset_write_head_to_beginning_of_qdisk(self))
+           (_is_write_head_less_than_max_size(self) || _is_able_to_reset_head_to_beginning_of_qdisk(self))
          ) || (_is_free_space_between_write_head_and_backlog_head(self, at_least));
 
 }
@@ -324,7 +324,7 @@ qdisk_get_empty_space(QDisk *self)
 static inline gboolean
 _could_not_wrap_write_head_last_push_but_now_can(QDisk *self)
 {
-  return _is_qdisk_overwritten(self) && _is_able_to_reset_write_head_to_beginning_of_qdisk(self);
+  return _is_qdisk_overwritten(self) && _is_able_to_reset_head_to_beginning_of_qdisk(self);
 }
 
 gint64
@@ -399,7 +399,7 @@ qdisk_push_tail(QDisk *self, GString *record)
           self->file_size = self->hdr->write_head;
         }
 
-      if (_is_qdisk_overwritten(self) && _is_able_to_reset_write_head_to_beginning_of_qdisk(self))
+      if (_is_qdisk_overwritten(self) && _is_able_to_reset_head_to_beginning_of_qdisk(self))
         {
           /* we were appending to the file, we are over the limit, and space
            * is available before the read head. truncate and wrap.
@@ -532,11 +532,22 @@ qdisk_get_head_position(QDisk *self)
   return self->hdr->read_head;
 }
 
+static gboolean
+_could_not_wrap_read_head_last_pop_but_now_can(QDisk *self)
+{
+  return (_is_position_after_disk_buf_size(self, self->hdr->read_head) &&
+          (_is_able_to_reset_head_to_beginning_of_qdisk(self) || self->hdr->backlog_len == 0) &&
+          self->hdr->read_head != self->hdr->write_head);
+}
+
 gboolean
 qdisk_pop_head(QDisk *self, GString *record)
 {
   if (self->hdr->read_head == self->hdr->write_head)
     return FALSE;
+
+  if (_could_not_wrap_read_head_last_pop_but_now_can(self))
+      self->hdr->read_head = _correct_position_if_after_disk_buf_size(self, &self->hdr->read_head);
 
   guint32 record_length;
   if (!_try_reading_record_length(self, &record_length))

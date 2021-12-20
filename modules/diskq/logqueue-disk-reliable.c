@@ -114,8 +114,9 @@ _ack_backlog(LogQueue *s, gint num_msg_to_ack)
 
   for (i = 0; i < num_msg_to_ack; i++)
     {
-      if (qdisk_get_backlog_head (self->super.qdisk) == qdisk_get_head_position(self->super.qdisk))
+      if (qdisk_get_backlog_head (self->super.qdisk) == qdisk_get_head_position(self->super.qdisk) || qdisk_get_backlog_count(self->super.qdisk) == 0)
         {
+          printf("WHY?????\n");
           goto exit_reliable;
         }
       if (self->qbacklog->length > 0)
