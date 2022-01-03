@@ -84,6 +84,27 @@ struct _QDisk
   DiskQueueOptions *options;
 };
 
+
+static void
+_asd_asd(QDisk *self, const char * fn_name)
+{
+  msg_error("[+]\t",
+            evt_tag_str("fn_name", fn_name),
+            evt_tag_long("len", self->hdr->length),
+            evt_tag_long("back_len", self->hdr->backlog_len),
+            evt_tag_long("write_head", self->hdr->write_head),
+            evt_tag_long("read_head", self->hdr->read_head),
+            evt_tag_long("back_head", self->hdr->backlog_head)
+            );
+}
+
+void
+qdisk_print_hdr(QDisk *self, const char * fn_name)
+{
+  _asd_asd(self, fn_name);
+}
+
+
 static gboolean
 pwrite_strict(gint fd, const void *buf, size_t count, off_t offset)
 {
@@ -188,6 +209,9 @@ _is_write_head_less_than_max_size(QDisk *self)
 static inline gboolean
 _is_able_to_reset_head_to_beginning_of_qdisk(QDisk *self)
 {
+  // if(self->hdr->backlog_head == QDISK_RESERVED_SPACE && self->hdr->backlog_len == 0)
+  //   return TRUE;
+    
   return self->hdr->backlog_head != QDISK_RESERVED_SPACE;
 }
 
@@ -342,6 +366,8 @@ qdisk_push_tail(QDisk *self, GString *record)
   if (!qdisk_started(self))
     return FALSE;
 
+  _asd_asd(self, "push tail start");
+
   if (_could_not_wrap_write_head_last_push_but_now_can(self))
     {
       /*
@@ -413,6 +439,7 @@ qdisk_push_tail(QDisk *self, GString *record)
         }
     }
   self->hdr->length++;
+  _asd_asd(self, "push tail end");
   return TRUE;
 }
 
@@ -468,7 +495,7 @@ _is_record_length_valid(QDisk *self, gssize bytes_read, guint32 record_length)
 static inline gboolean
 _try_reading_record_length(QDisk *self, guint32 *record_length)
 {
-  guint32 read_record_length;
+  guint32 read_record_length = 0;
   gssize bytes_read = _read_record_length_from_disk(self, &read_record_length);
 
   if (!_is_record_length_valid(self, bytes_read, read_record_length))
@@ -535,19 +562,41 @@ qdisk_get_head_position(QDisk *self)
 static gboolean
 _could_not_wrap_read_head_last_pop_but_now_can(QDisk *self)
 {
-  return (_is_position_after_disk_buf_size(self, self->hdr->read_head) &&
-          (_is_able_to_reset_head_to_beginning_of_qdisk(self) || self->hdr->backlog_len == 0) &&
-          self->hdr->read_head != self->hdr->write_head);
+  if(!_is_position_after_disk_buf_size(self, self->hdr->read_head))
+    return FALSE;
+
+  if(self->hdr->backlog_head == QDISK_RESERVED_SPACE) {
+    if(self->hdr->backlog_len == 0)
+      return TRUE;
+  } else {
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+static gboolean
+_before_read_check(QDisk *self, gint64 *postion)
+{
+  if (*postion == self->hdr->write_head)
+    return FALSE;
+
+  if (_could_not_wrap_read_head_last_pop_but_now_can(self)) 
+      *postion = _correct_position_if_after_disk_buf_size(self, postion);
+
+  if (*postion == self->hdr->write_head)
+    return FALSE;
+  
+  return TRUE;
 }
 
 gboolean
 qdisk_pop_head(QDisk *self, GString *record)
 {
-  if (self->hdr->read_head == self->hdr->write_head)
-    return FALSE;
 
-  if (_could_not_wrap_read_head_last_pop_but_now_can(self))
-      self->hdr->read_head = _correct_position_if_after_disk_buf_size(self, &self->hdr->read_head);
+  if (!_before_read_check(self, &self->hdr->read_head))
+    return FALSE;
+  _asd_asd(self, "pop head start");
 
   guint32 record_length;
   if (!_try_reading_record_length(self, &record_length))
@@ -558,13 +607,15 @@ qdisk_pop_head(QDisk *self, GString *record)
 
   _update_positions_after_read(self, record_length);
 
+  _asd_asd(self, "pop head end");
+
   return TRUE;
 }
 
 gboolean
 qdisk_remove_head(QDisk *self)
 {
-  if (self->hdr->read_head == self->hdr->write_head)
+  if (!_before_read_check(self, &self->hdr->read_head))
     return FALSE;
 
   guint32 record_length;
@@ -572,6 +623,7 @@ qdisk_remove_head(QDisk *self)
     return FALSE;
 
   _update_positions_after_read(self, record_length);
+
 
   return TRUE;
 }
@@ -1239,8 +1291,14 @@ qdisk_read(QDisk *self, gpointer buffer, gsize bytes_to_read, gint64 position)
 guint64
 qdisk_skip_record(QDisk *self, guint64 position)
 {
+  _asd_asd(self, "skip record start");
+//read check
+
+  if (!_before_read_check(self, &self->hdr->read_head))
+    return position;
+
   guint64 new_position = position;
-  guint32 record_length;
+  guint32 record_length = 0;
   qdisk_read(self, (gchar *) &record_length, sizeof(record_length), position);
   record_length = GUINT32_FROM_BE(record_length);
   new_position += record_length + sizeof(record_length);
@@ -1248,6 +1306,9 @@ qdisk_skip_record(QDisk *self, guint64 position)
     {
       new_position = _correct_position_if_after_disk_buf_size(self, (gint64 *)&new_position);
     }
+
+
+  _asd_asd(self, "skip record end");
   return new_position;
 }
 

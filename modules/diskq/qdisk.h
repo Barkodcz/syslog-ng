@@ -86,5 +86,5 @@ guint64 qdisk_skip_record(QDisk *self, guint64 position);
 
 gboolean qdisk_serialize_msg(QDisk *self, LogMessage *msg, GString *serialized);
 gboolean qdisk_deserialize_msg(QDisk *self, GString *serialized, LogMessage **msg);
-
+void qdisk_print_hdr(QDisk *self, const char * fn_name);
 #endif /* QDISK_H_ */

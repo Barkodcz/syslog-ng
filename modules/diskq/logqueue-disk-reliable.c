@@ -111,10 +111,11 @@ _ack_backlog(LogQueue *s, gint num_msg_to_ack)
   guint i;
 
   g_mutex_lock(&s->lock);
+  qdisk_print_hdr(self->super.qdisk, "ack_back start");
 
   for (i = 0; i < num_msg_to_ack; i++)
     {
-      if (qdisk_get_backlog_head (self->super.qdisk) == qdisk_get_head_position(self->super.qdisk) || qdisk_get_backlog_count(self->super.qdisk) == 0)
+      if (qdisk_get_backlog_head (self->super.qdisk) == qdisk_get_head_position(self->super.qdisk)/* && qdisk_get_backlog_count(self->super.qdisk) == 0*/)
         {
           printf("WHY?????\n");
           goto exit_reliable;
@@ -137,6 +138,7 @@ _ack_backlog(LogQueue *s, gint num_msg_to_ack)
     }
 exit_reliable:
   qdisk_reset_file_if_empty(self->super.qdisk);
+  qdisk_print_hdr(self->super.qdisk, "ack_back end");
   g_mutex_unlock(&s->lock);
 }
 
@@ -187,7 +189,7 @@ _rewind_from_qbacklog(LogQueueDiskReliable *self, gint64 new_pos)
     }
 }
 
-
+// probably here is the problem :(
 static void
 _rewind_backlog(LogQueue *s, guint rewind_count)
 {
@@ -199,6 +201,7 @@ _rewind_backlog(LogQueue *s, guint rewind_count)
 
   g_mutex_lock(&s->lock);
 
+  qdisk_print_hdr(self->super.qdisk, "_rewind_backlog start");
   rewind_count = MIN(rewind_count, qdisk_get_backlog_count(self->super.qdisk));
   number_of_messages_stay_in_backlog = qdisk_get_backlog_count(self->super.qdisk) - rewind_count;
   new_read_head = qdisk_get_backlog_head(self->super.qdisk);
@@ -213,6 +216,7 @@ _rewind_backlog(LogQueue *s, guint rewind_count)
   qdisk_set_length(self->super.qdisk, qdisk_get_length(self->super.qdisk) + rewind_count);
 
   log_queue_queued_messages_add(s, rewind_count);
+  qdisk_print_hdr(self->super.qdisk, "_rewind_backlog end");
 
   g_mutex_unlock(&s->lock);
 }

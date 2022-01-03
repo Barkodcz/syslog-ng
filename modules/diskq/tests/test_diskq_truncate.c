@@ -303,6 +303,8 @@ static void
 _assert_cursors_are_at_start(LogQueue *q)
 {
   QDisk *qdisk = ((LogQueueDisk *)q)->qdisk;
+  printf("reader head\t%d\n", qdisk_get_reader_head(qdisk));
+  printf("writer head\t%d\n", qdisk_get_writer_head(qdisk));
 
   cr_assert_eq(qdisk_get_reader_head(qdisk), QDISK_RESERVED_SPACE, "Read head was not reset!");
   cr_assert_eq(qdisk_get_writer_head(qdisk), QDISK_RESERVED_SPACE, "Write head was not reset!");
@@ -398,29 +400,32 @@ Test(diskq_truncate, test_diskq_truncate_short_read)
 
   QDisk *qdisk = ((LogQueueDisk *)q)->qdisk;
   const gint full_disk_message_number = _calculate_full_disk_message_num(qdisk);
-  // 1. feed to full
-  feed_some_messages(q, full_disk_message_number);
-  cr_assert_eq(log_queue_get_length(q), full_disk_message_number,
-               "Not all messages have been queued!");
-  const gint64 full_file_size = _get_file_size(q);
-  send_some_messages(q, full_disk_message_number);
+  for(int i = 0; i < 10; ++i)
+    {
+      // 1. feed to full
+      feed_some_messages(q, full_disk_message_number);
+      cr_assert_eq(log_queue_get_length(q), full_disk_message_number,
+                  "Not all messages have been queued!");
+      const gint64 full_file_size = _get_file_size(q);
+      send_some_messages(q, full_disk_message_number);
 
-  // 2. process some messages
-  log_queue_ack_backlog(q, FIRST_ACK_NUMBER);
+      // 2. process some messages
+      log_queue_ack_backlog(q, FIRST_ACK_NUMBER);
 
-  // 3. send and ack more messages, but qdisk is not full
-  feed_some_messages(q, SEND_AND_ACK_MSG_NUMBER);
-  send_some_messages(q, SEND_AND_ACK_MSG_NUMBER);
-  log_queue_ack_backlog(q, SEND_AND_ACK_MSG_NUMBER);
+      // 3. send and ack more messages, but qdisk is not full
+      feed_some_messages(q, SEND_AND_ACK_MSG_NUMBER);
+      send_some_messages(q, SEND_AND_ACK_MSG_NUMBER);
+      log_queue_ack_backlog(q, SEND_AND_ACK_MSG_NUMBER);
 
-  // 4. ack every messages
-  log_queue_ack_backlog(q, full_disk_message_number - FIRST_ACK_NUMBER);
+      // 4. ack every messages
+      log_queue_ack_backlog(q, full_disk_message_number - FIRST_ACK_NUMBER);
 
-  cr_assert_eq(_get_file_size(q), full_file_size,
-               "Unexpected disk-queue file truncate happened when truncate-size-ratio(1) was set!");
-  _assert_cursors_are_at_start(q);
+      cr_assert_eq(_get_file_size(q), full_file_size,
+                  "Unexpected disk-queue file truncate happened when truncate-size-ratio(1) was set!");
+      _assert_cursors_are_at_start(q);
+      _assert_diskq_actual_file_size_with_stored(q);
+    }
 
-  _assert_diskq_actual_file_size_with_stored(q);
 
   unlink(filename->str);
   g_string_free(filename, TRUE);
